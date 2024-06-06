@@ -8,6 +8,8 @@ pipeline {
         //=============================//
     	stage('Prerequisites'){ steps{
 	    sh 'mpicc -v'
+	    sh 'nvidia-smi'
+	    sh 'nvcc -V'
 	    sh 'git submodule update --init'
 	    sh 'julia -v'
 }}
