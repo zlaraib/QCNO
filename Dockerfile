@@ -6,6 +6,6 @@ RUN apt-get update && \
                        liblapack-dev libpnetcdf-dev git python-is-python3 wget && \
     pip3 install numpy matplotlib h5py sympy scipy jupyter
 RUN pip3 install qiskit
-RUN pip3 install qiskit-aer qiskit-algorithms qiskit-ibm-provider qiskit-ibm-runtime qiskit-nature qiskit-terra pytket-qiskit
+RUN pip3 install qiskit-aer qiskit-algorithms qiskit-ibm-provider qiskit-ibm-runtime qiskit-nature pytket-qiskit
 ENV USER=jenkins
 ENV LOGNAME=jenkins
