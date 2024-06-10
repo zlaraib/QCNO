@@ -2,7 +2,6 @@
 
 import numpy as np
 from scipy.linalg import expm
-from qiskit import execute
 from qiskit.circuit import QuantumCircuit
 from qiskit.quantum_info import Operator
 
