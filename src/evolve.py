@@ -3,21 +3,52 @@
 import numpy as np
 from scipy.linalg import expm
 from qiskit.circuit import QuantumCircuit
-from qiskit.quantum_info import Operator
+
+
+from qiskit.quantum_info import Pauli, Statevector, SparsePauliOp, Operator
 
 from momentum import momentum
 from constants import hbar, c , eV, MeV, GeV, G_F, kB
+from geometric_func import geometric_func
+from hamiltonian import construct_hamiltonian
 
-def evolve_and_measure_circuit(time, H, N_sites):
-    U = Operator(expm(-1j * H * time))
+def apply_single_qubit_gate(qc, coef, qubit, pauli):
+    if pauli == 'X':
+        qc.rx(2 * coef, qubit)
+    elif pauli == 'Y':
+        qc.ry(2 * coef, qubit)
+    elif pauli == 'Z':
+        qc.rz(2 * coef, qubit)
+
+def apply_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
+    if pauli1 == 'X' and pauli2 == 'X':
+        qc.rxx(2 * coef, qubit1, qubit2)
+    elif pauli1 == 'Y' and pauli2 == 'Y':
+        qc.ryy(2 * coef, qubit1, qubit2)
+    elif pauli1 == 'Z' and pauli2 == 'Z':
+        qc.rzz(2 * coef, qubit1, qubit2)
+
+
+def evolve_and_measure_circuit(time, pauli_terms, N_sites):
     qc = QuantumCircuit(N_sites, 1)
     half_N_sites = N_sites // 2
     qc.x(range(half_N_sites))
-    qc.unitary(U, range(N_sites), label="exp(-iHt)")
-    qc.measure(0, 0)
-    # print(qc.decompose(reps=2)) #reps repeats the deocmpostion that many times. 
-    return qc
 
+    num_steps = 10  # Number of Trotter steps
+    dt = time / num_steps
+
+    for _ in range(num_steps):
+        for coef, pauli in pauli_terms:
+            pauli_str = pauli.to_label()
+            qubits = [i for i, p in enumerate(pauli_str) if p != 'I']
+            
+            if len(qubits) == 1:
+                apply_single_qubit_gate(qc, coef * dt, qubits[0], pauli_str[qubits[0]])
+            elif len(qubits) == 2:
+                apply_two_qubit_gate(qc, coef * dt, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
+
+    qc.measure(0, 0)
+    return qc
 
 def evolve_and_measure_qcircuit(time, H, N_sites, measure='Z'):
     U = Operator(expm(-1j * H * time* 1/hbar))
@@ -49,4 +80,9 @@ def evolve_and_measure_qcircuit(time, H, N_sites, measure='Z'):
 
     qc.measure(0, 0)
     return qc
+
+
+
+
+
 
