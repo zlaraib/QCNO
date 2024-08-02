@@ -29,7 +29,7 @@ def apply_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
         qc.rzz(2 * coef, qubit1, qubit2)
 
 
-def evolve_and_measure_circuit(time, pauli_terms, N_sites):
+def evolve_and_measure_circuit(time, pauli_terms, N_sites,trotter_order):
     qc = QuantumCircuit(N_sites, 1)
     half_N_sites = N_sites // 2
     qc.x(range(half_N_sites))
@@ -37,15 +37,28 @@ def evolve_and_measure_circuit(time, pauli_terms, N_sites):
     num_steps = 10  # Number of Trotter steps
     dt = time / num_steps
 
+    if trotter_order == 'first':
+        dt_substep = dt
+    if trotter_order == 'second':
+        dt_substep = dt/2
+        pauli_terms = pauli_terms + pauli_terms[::-1]
+        
     for _ in range(num_steps):
         for coef, pauli in pauli_terms:
+            #converts the Pauli operator object into its string representation
             pauli_str = pauli.to_label()
+            
+            #Creates a list of qubits that are affected by the Pauli term.
+            #uses a list comprehension that iterates over the string representation pauli_str of the Pauli operator.
+            # enumerate(pauli_str) provides both the index i and the character p for each position in the string.
+            #the condition if p != 'I' ensures that only qubits with a Pauli operator other than the identity I are included in the list qubits.
             qubits = [i for i, p in enumerate(pauli_str) if p != 'I']
             
             if len(qubits) == 1:
-                apply_single_qubit_gate(qc, coef * dt, qubits[0], pauli_str[qubits[0]])
+                #coef * dt_substep: The rotation angle, which is the coefficient coef multiplied by the time step dt_substep
+                apply_single_qubit_gate(qc, coef * dt_substep, qubits[0], pauli_str[qubits[0]])
             elif len(qubits) == 2:
-                apply_two_qubit_gate(qc, coef * dt, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
+                apply_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
 
     qc.measure(0, 0)
     return qc
