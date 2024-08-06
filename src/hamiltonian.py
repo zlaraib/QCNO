@@ -5,6 +5,7 @@ from qiskit.quantum_info import Pauli, Operator
 from momentum import momentum
 from constants import hbar, c , eV, MeV, GeV, G_F, kB
 from geometric_func import geometric_func
+from qiskit.circuit import QuantumCircuit
 
 
 def construct_hamiltonian(N, omega, B, N_sites, Δx, delta_m_squared, p, x, Δp, theta_nu, shape_name, L, τ, energy_sign):
@@ -14,7 +15,7 @@ def construct_hamiltonian(N, omega, B, N_sites, Δx, delta_m_squared, p, x, Δp,
     for i in range(N_sites - 1):
         for j in range(i + 1, N_sites):
             geometric_factor = geometric_func(p, p_hat, i, j, theta_nu)
-            interaction_strength = (np.sqrt(2) * G_F * (N[i] + N[j]) / (2 * (Δx)**3) * (1 / 2)) * geometric_factor
+            interaction_strength = ((1/2) * np.sqrt(2) * G_F * (N[i] + N[j]) / (2 * ((Δx)**3))) * geometric_factor
             
             if interaction_strength != 0:
                 XX = Pauli(f'{"I"*i}X{"I"*(j-i-1)}X{"I"*(N_sites-j-1)}')
