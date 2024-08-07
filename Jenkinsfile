@@ -24,19 +24,19 @@ pipeline {
                 sh 'jupyter nbconvert --to script tests/main_vac_osc.ipynb'
                 // Run the converted Python script
                 sh 'python tests/main_vac_osc.py'
-				archiveArtifacts artifacts: '**/*.pdf'
+				archiveArtifacts artifacts: '*.pdf'
             }
 } 
 	stage('Rogerro(2021)_only_self_interactions'){ steps{
 		sh 'jupyter nbconvert --to script tests/main_self_int_Rog.ipynb'
 		sh 'python tests/main_self_int_Rog.py'
-		archiveArtifacts artifacts: '**/*.pdf'
+		archiveArtifacts artifacts: '*.pdf'
     } 
 }
 	stage('Rogerro(2021) full Hamiltonian'){ steps{
 		sh 'jupyter nbconvert --to script tests/main_Rog.ipynb'
 		sh 'python tests/main_Rog.py'
-		archiveArtifacts artifacts: '**/*.pdf'
+		archiveArtifacts artifacts: '*.pdf'
     } 
 }
 	stage('Richers(2021) MB Homogenous QC_FFI'){ steps{
