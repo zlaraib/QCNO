@@ -28,9 +28,8 @@ def apply_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
     elif pauli1 == 'Z' and pauli2 == 'Z':
         qc.rzz(2 * coef, qubit1, qubit2)
 
-def evolve_and_measure_circuit(time, pauli_terms,  N_sites, theta_nu, trotter_order, measure='Z'):
-    num_steps = 10 # Number of Trotter steps
-    dt = time / num_steps
+def evolve_and_measure_circuit(time, pauli_terms,  N_sites, theta_nu,trotter_steps, trotter_order, measure='Z'):
+    dt = time / trotter_steps
 
     if trotter_order == 'first':
         dt_substep = dt
@@ -63,7 +62,7 @@ def evolve_and_measure_circuit(time, pauli_terms,  N_sites, theta_nu, trotter_or
         qc.sdg(0)
         qc.h(0)
 
-    for _ in range(num_steps):
+    for _ in range(trotter_steps):
         for coef, pauli in pauli_terms:
             #converts the Pauli operator object into its string representation
             pauli_str = pauli.to_label()
