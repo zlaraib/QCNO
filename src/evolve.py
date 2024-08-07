@@ -48,19 +48,6 @@ def evolve_and_measure_circuit(time, pauli_terms,  N_sites, theta_nu,trotter_ste
         dt_substep = dt_substep 
         qc.x(range(half_N_sites)) # initial state for rog and vac osc tests
 
-    # transform basis from Z (up/down or |0>/|1>) to X (equal super position of |up>/ |down> to get the x basis =|+>/|->) using hadamard on the first qubit(b/c we are measurng the first qubit only)
-    # the measurement of counts in x basis is done later in main script to compute <sigma_x>
-    if measure == 'X':
-        qc.h(0)
-        
-    # prepare the quantum state by transforming basis from Z to Y using sdg on the first qubit(b/c we are measurng the first qubit only)
-    # Similarly, the 'Sdg' gate (S-dagger) is applied, which corresponds to the inverse of the phase gate 'S'. This introduces a phase shift of - pi/2.
-    # Then, a Hadamard gate 'H' is applied. This sequence of gates transforms from Z basis to Y basis. 
-    
-    # the measurement of counts in Y basis is done later in main script to compute <sigma_y>
-    elif measure == 'Y':
-        qc.sdg(0)
-        qc.h(0)
 
     for _ in range(trotter_steps):
         for coef, pauli in pauli_terms:
@@ -78,7 +65,22 @@ def evolve_and_measure_circuit(time, pauli_terms,  N_sites, theta_nu,trotter_ste
                 apply_single_qubit_gate(qc, coef * dt_substep, qubits[0], pauli_str[qubits[0]])
             elif len(qubits) == 2:
                 apply_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
-                
+      
+      
+    # transform basis from Z (up/down or |0>/|1>) to X (equal super position of |up>/ |down> to get the x basis =|+>/|->) using hadamard on the first qubit(b/c we are measurng the first qubit only)
+    # the measurement of counts in x basis is done later in main script to compute <sigma_x>
+    if measure == 'X':
+        qc.h(0)
+        
+    # prepare the quantum state by transforming basis from Z to Y using sdg on the first qubit(b/c we are measurng the first qubit only)
+    # Similarly, the 'Sdg' gate (S-dagger) is applied, which corresponds to the inverse of the phase gate 'S'. This introduces a phase shift of - pi/2.
+    # Then, a Hadamard gate 'H' is applied. This sequence of gates transforms from Z basis to Y basis. 
+    
+    # the measurement of counts in Y basis is done later in main script to compute <sigma_y>
+    elif measure == 'Y':
+        qc.sdg(0)
+        qc.h(0)          
+        
     qc.measure(0, 0)
     return qc
 
