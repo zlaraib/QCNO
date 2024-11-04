@@ -9,7 +9,7 @@ def calc_mean_and_sigma(counts, shots, measure, df=0):
             sigma += count / shots
         else:
             sigma -= count / shots
-    print(f"sigma_{measure}_mean_should_be= ",sigma)
+    # print(f"sigma_{measure}_mean_should_be= ",sigma)
         
     #METHOD 2 designed to conduct the chi square test 
     # Initialize sigma array based on the measure ('X', 'Y', or 'Z') to store sigma_{measure= X, Y, Z} values for all shots
@@ -26,7 +26,7 @@ def calc_mean_and_sigma(counts, shots, measure, df=0):
 
     # Calculate the mean of sigma for this time step
     mean_sigma = np.mean(sigma)
-    print(f"Mean of sigma_{measure} is: {mean_sigma}")
+    # print(f"Mean of sigma_{measure} is: {mean_sigma}")
     
     # Calculate the standard deviation using numpy's std function
     std_sigma_unadjusted = np.std(sigma, ddof=df)  # ddof=0 for population std, ddof=1 for sample std
@@ -34,7 +34,7 @@ def calc_mean_and_sigma(counts, shots, measure, df=0):
     # Adjust the standard deviation to match the formula in the image
     std_sigma = std_sigma_unadjusted * np.sqrt(1 / shots)
 
-    print(f"Standard Deviation of sigma_{measure}: {std_sigma}")
+    # print(f"Standard Deviation of sigma_{measure}: {std_sigma}")
     
     sigma = mean_sigma #reassigned the <sigma_x> over all shots for each t in time
     
