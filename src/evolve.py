@@ -89,20 +89,17 @@ def apply_single_qubit_gate(qc, coef, qubit, pauli):
 
 def apply_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
     if pauli1 == 'X' and pauli2 == 'X':
-        gate = QuantumCircuit(2)
-        gate.rxx(2 * coef, 0, 1)
+        qc.rxx(2 * coef, qubit1, qubit2)
     elif pauli1 == 'Y' and pauli2 == 'Y':
-        gate = QuantumCircuit(2)
-        gate.ryy(2 * coef, 0, 1)
+        qc.ryy(2 * coef, qubit1, qubit2)
     elif pauli1 == 'Z' and pauli2 == 'Z':
-        gate = QuantumCircuit(2)
-        gate.rzz(2 * coef, 0, 1)
+        qc.rzz(2 * coef, qubit1, qubit2)
 
     print("Original Circuit (before decomposition):")
-    print(gate.draw())
+    print(qc.draw())
     
     # Calculate the matrix repesentation of the two-qubit gate
-    unitary_matrix = Operator(gate)
+    unitary_matrix = Operator(qc)
 
     # Decompose the unitary into native gates
     # TwoQubitBasisDecomposer: This class is used to decompose the unitary matrix into a sequence of gates that are supported by the target quantum hardware.
