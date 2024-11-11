@@ -6,9 +6,9 @@ from qiskit_ibm_runtime import SamplerV2 as Sampler
 
 from evolve import evolve_and_measure_circuit
 
-def meas_counts(t, pauli_terms, N_sites, theta_nu, trotter_steps, trotter_order, measure, backend_name, backend, shots):
+def meas_counts(t, pauli_terms, N_sites, theta_nu, trotter_steps, trotter_order, measure, backend_name, backend,optimization_level, shots):
     # Evolve and measure circuit based on the provided Pauli term (X, Y, Z)
-    qc = evolve_and_measure_circuit(t, pauli_terms, backend_name, N_sites, theta_nu, trotter_steps, trotter_order, measure=measure)
+    qc = evolve_and_measure_circuit(t, pauli_terms, backend_name,backend, optimization_level, N_sites, theta_nu, trotter_steps, trotter_order, measure=measure)
     print("Circuit depth= ", qc.depth())
     
     if backend_name == 'ionq':
