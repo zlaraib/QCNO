@@ -30,7 +30,7 @@ def apply_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
     elif pauli1 == 'Z' and pauli2 == 'Z':
         qc.rzz(2 * coef, qubit1, qubit2)
         
-def two_qubit_KAK_decomp(qc, coef, qubit1, qubit2, pauli1, pauli2):
+def two_qubit_KAK_decomp(qc, coef, qubit1, qubit2, pauli1, pauli2, backend,optimization_level):
     if pauli1 == 'X' and pauli2 == 'X':
         gate = QuantumCircuit(2)
         gate.rxx(2 * coef, 0, 1)
@@ -52,18 +52,17 @@ def two_qubit_KAK_decomp(qc, coef, qubit1, qubit2, pauli1, pauli2):
     # The ECRGate is used as the native entangling gate.
     # The euler_basis='U3' specifies that single-qubit rotations should be decomposed using U3 gates, which can then be further decomposed into RZ, SX, and X gates.
     # The decomposed circuit (decomposed_circuit) is obtained, consisting of a series of native gates that collectively implement the original two-qubit gate.
-    decomposer = TwoQubitBasisDecomposer(CXGate(), euler_basis='U3')
+    decomposer = TwoQubitBasisDecomposer(ECRGate(), euler_basis='U3')
     
     # This is effectively calling decomposer.__call__(unitary_matrix)
     decomposed_circuit = decomposer(unitary_matrix)
     
     print("\nDecomposed Circuit (before transpilation):")
     print(decomposed_circuit.draw())
-
-    transpiled_circuit = transpile(decomposed_circuit, basis_gates=['rz', 'sx', 'x', 'cx'], optimization_level=3)
+        
+    transpiled_circuit = transpile(decomposed_circuit, basis_gates=['rz', 'sx', 'x', 'cx'], optimization_level=optimization_level)
     print("\nTranspiled Circuit (IBM native gates):")
     print(transpiled_circuit.draw())
-    
     # Step 6: Print the gate counts in the decomposed circuit
     gate_counts = transpiled_circuit.count_ops()
     print("\nGate counts in the transpiled circuit:")
@@ -72,7 +71,7 @@ def two_qubit_KAK_decomp(qc, coef, qubit1, qubit2, pauli1, pauli2):
     # Add the decomposed gates to the main quantum circuit
     qc.append(transpiled_circuit.to_instruction(), [qubit1, qubit2])
 
-def evolve_and_measure_circuit(time, pauli_terms, backend_name, N_sites, theta_nu,trotter_steps, trotter_order, measure='Z'):
+def evolve_and_measure_circuit(time, pauli_terms, backend_name,backend,optimization_level, N_sites, theta_nu,trotter_steps, trotter_order, measure='Z'):
     dt = time / trotter_steps
 
     if trotter_order == 'first':
@@ -109,7 +108,7 @@ def evolve_and_measure_circuit(time, pauli_terms, backend_name, N_sites, theta_n
                 apply_single_qubit_gate(qc, coef * dt_substep, qubits[0], pauli_str[qubits[0]])
             elif len(qubits) == 2:
                 if backend_name == "manila" or backend_name == "ibm" :
-                    two_qubit_KAK_decomp(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
+                    two_qubit_KAK_decomp(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]], backend, optimization_level)
                 else : 
                     apply_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
 
