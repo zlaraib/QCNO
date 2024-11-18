@@ -107,9 +107,9 @@ def evolve_and_measure_circuit(time, pauli_terms, backend_name,backend,optimizat
                 #coef * dt_substep: The rotation angle, which is the coefficient coef multiplied by the time step dt_substep
                 apply_single_qubit_gate(qc, coef * dt_substep, qubits[0], pauli_str[qubits[0]])
             elif len(qubits) == 2:
-                if backend_name == "manila" or backend_name == "ibm" :
-                    two_qubit_KAK_decomp(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]], backend, optimization_level)
-                else : 
+                # if backend_name == "manila" or backend_name == "ibm" :
+                #     two_qubit_KAK_decomp(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]], backend, optimization_level)
+                # else : 
                     apply_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
 
       
