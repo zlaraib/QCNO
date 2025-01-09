@@ -30,6 +30,38 @@ def apply_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
     elif pauli1 == 'Z' and pauli2 == 'Z':
         qc.rzz(2 * coef, qubit1, qubit2)
         
+def custom_rzz(qc, theta, qubit1, qubit2):
+    qc.cx(qubit1, qubit2)
+    qc.rz(theta, qubit2)
+    qc.cx(qubit1, qubit2)
+
+def custom_rxx(qc, theta, qubit1, qubit2):
+    qc.h(qubit1)
+    qc.h(qubit2)
+    custom_rzz(qc, theta, qubit1, qubit2)
+    qc.h(qubit1)
+    qc.h(qubit2)
+
+def custom_ryy(qc, theta, qubit1, qubit2):
+    qc.sdg(qubit1)
+    qc.sdg(qubit2)
+    qc.h(qubit1)
+    qc.h(qubit2)
+    custom_rzz(qc, theta, qubit1, qubit2)
+    qc.h(qubit1)
+    qc.h(qubit2)
+    qc.s(qubit1)
+    qc.s(qubit2)
+
+def apply_custom_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
+    angle = 2 * coef  # Calculate the rotation angle
+    if pauli1 == 'X' and pauli2 == 'X':
+        custom_rxx(qc, angle, qubit1, qubit2)
+    elif pauli1 == 'Y' and pauli2 == 'Y':
+        custom_ryy(qc, angle, qubit1, qubit2)
+    elif pauli1 == 'Z' and pauli2 == 'Z':
+        custom_rzz(qc, angle, qubit1, qubit2)
+
 def two_qubit_KAK_decomp(qc, coef, qubit1, qubit2, pauli1, pauli2, backend,optimization_level):
     if pauli1 == 'X' and pauli2 == 'X':
         gate = QuantumCircuit(2)
@@ -58,20 +90,29 @@ def two_qubit_KAK_decomp(qc, coef, qubit1, qubit2, pauli1, pauli2, backend,optim
     decomposed_circuit = decomposer(unitary_matrix)
     
     print("\nDecomposed Circuit (before transpilation):")
-    print(decomposed_circuit.draw())
+    # print(decomposed_circuit.draw())
+    # Print the gate counts in the decomposed circuit
+    gate_counts = decomposed_circuit .count_ops()
+    print("\nGate counts in the decomposed circuit:")
+    print(gate_counts)
+    print("Circuit depth in decomposed circuit= ", decomposed_circuit.depth())
         
     transpiled_circuit = transpile(decomposed_circuit, basis_gates=['rz', 'sx', 'x', 'cx'], optimization_level=optimization_level)
     print("\nTranspiled Circuit (IBM native gates):")
-    print(transpiled_circuit.draw())
+    # print(transpiled_circuit.draw())
     # Step 6: Print the gate counts in the decomposed circuit
     gate_counts = transpiled_circuit.count_ops()
     print("\nGate counts in the transpiled circuit:")
     print(gate_counts)
-
+    print("Circuit depth in transpiled circuit= ", transpiled_circuit.depth())
+      
     # Add the decomposed gates to the main quantum circuit
     qc.append(transpiled_circuit.to_instruction(), [qubit1, qubit2])
 
-def evolve_and_measure_circuit(time, pauli_terms, backend_name,backend,optimization_level, N_sites, theta_nu,trotter_steps, trotter_order, measure='Z'):
+def evolve_and_measure_circuit(time, backend_name,backend,optimization_level, N, omega, B, N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order, measure='Z'):
+    pauli_terms = construct_hamiltonian(N, omega, B, N_sites, Δx,  p,theta_nu)
+    # print("Pauli Terms:", pauli_terms)
+    
     dt = time / trotter_steps
 
     if trotter_order == 'first':
@@ -107,10 +148,13 @@ def evolve_and_measure_circuit(time, pauli_terms, backend_name,backend,optimizat
                 #coef * dt_substep: The rotation angle, which is the coefficient coef multiplied by the time step dt_substep
                 apply_single_qubit_gate(qc, coef * dt_substep, qubits[0], pauli_str[qubits[0]])
             elif len(qubits) == 2:
-                # if backend_name == "manila" or backend_name == "ibm" :
+                # if backend_name == "manila" or backend_name == "ibm" : # decomposes each 2 qubit gate seperately in the circuit for 1 time step and optimizes those 2-qubit gates 
                 #     two_qubit_KAK_decomp(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]], backend, optimization_level)
                 # else : 
                     apply_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
+                    # print(f"Applying term: {coef} * {pauli.to_label()} on qubits {qubits}")
+                    # apply_custom_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
+
 
       
     # transform basis from Z (up/down or |0>/|1>) to X (equal super position of |up>/ |down> to get the x basis =|+>/|->) using hadamard on the first qubit(b/c we are measurng the first qubit only)
