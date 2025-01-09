@@ -8,7 +8,7 @@ from qiskit import transpile
 from qiskit.circuit import QuantumCircuit
 from qiskit.quantum_info import Operator
 from qiskit.synthesis import TwoQubitBasisDecomposer
-from evolve import evolve_and_measure_circuit, merge_commuting_terms
+from evolve import evolve_and_measure_circuit
 from qiskit.quantum_info import Statevector,DensityMatrix
 
 def meas_counts(t, N, omega, B, N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order, measure, backend_name, backend,optimization_level, shots):
