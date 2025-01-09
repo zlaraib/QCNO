@@ -8,7 +8,7 @@ from geometric_func import geometric_func
 from qiskit.circuit import QuantumCircuit
 
 
-def construct_hamiltonian(N, omega, B, N_sites, Δx, delta_m_squared, p, x, Δp, theta_nu, shape_name, L, τ, energy_sign):
+def construct_hamiltonian(N, omega, B, N_sites, Δx,  p,theta_nu):
     pauli_terms = []
     p_mod, p_hat = momentum(p, N_sites)  
     
