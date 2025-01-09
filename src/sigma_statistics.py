@@ -2,19 +2,22 @@ import numpy as np
 
 def calc_mean_and_sigma(counts, shots, measure, df=0):
     
-    # Directly calculate expectation value of sigma for the first qubit
-    sigma = 0
-    for outcome, count in counts.items():
-        if outcome[0] == '0':
-            sigma += count / shots
-        else:
-            sigma -= count / shots
+    # # Directly calculate expectation value of sigma for the first qubit
+    # sigma = 0
+    # for outcome, count in counts.items():
+    #     if outcome[0] == '0':
+    #         sigma += count / shots
+    #     else:
+    #         sigma -= count / shots
     # print(f"sigma_{measure}_mean_should_be= ",sigma)
+    # # Round sigma to 15 decimal places
+    # sigma = round(sigma, 15)
+    # print(f"sigma (method 1, 15 decimals): {sigma:.15f}")
         
     #METHOD 2 designed to conduct the chi square test 
     # Initialize sigma array based on the measure ('X', 'Y', or 'Z') to store sigma_{measure= X, Y, Z} values for all shots
-    sigma = np.zeros(shots)
-    
+    sigma = np.zeros(shots, dtype=np.float64)
+    # print("sigma_initial= ",sigma)
     # Fill the sigma array with values for each shot
     index = 0
     for outcome, count in counts.items():
@@ -23,7 +26,9 @@ def calc_mean_and_sigma(counts, shots, measure, df=0):
             if index < shots:
                 sigma[index] = value
                 index += 1
+    sigma = sigma.round(decimals=15)
 
+    # print("sigma_15dp= ",sigma)
     # Calculate the mean of sigma for this time step
     mean_sigma = np.mean(sigma)
     # print(f"Mean of sigma_{measure} is: {mean_sigma}")
@@ -35,7 +40,7 @@ def calc_mean_and_sigma(counts, shots, measure, df=0):
     std_sigma = std_sigma_unadjusted * np.sqrt(1 / shots)
 
     # print(f"Standard Deviation of sigma_{measure}: {std_sigma}")
-    
+
     sigma = mean_sigma #reassigned the <sigma_x> over all shots for each t in time
     
     # # Calculate the sum of squared deviations from the mean
