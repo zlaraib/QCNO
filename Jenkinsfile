@@ -39,7 +39,7 @@ pipeline {
 		archiveArtifacts artifacts: '*.pdf'
     } 
 }
-	stage('Richers(2021) MB Homogenous QC_FFI'){ steps{
+	stage('Richers(2021) MF Homogenous QC_FFI'){ steps{
 		sh 'jupyter nbconvert --to script tests/Homogenous_FFI_Richers.ipynb'
 		sh 'python tests/Homogenous_FFI_Richers.py'
 		archiveArtifacts artifacts: 'misc/plots/FFI/*/*/*/*.pdf'
