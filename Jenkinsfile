@@ -30,13 +30,13 @@ pipeline {
 	stage('Rogerro(2021)_only_self_interactions'){ steps{
 		sh 'jupyter nbconvert --to script tests/main_self_int_Rog.ipynb'
 		sh 'python tests/main_self_int_Rog.py'
-		archiveArtifacts artifacts: 'misc/plots/FFI/*/*/*/*.pdf'
+		archiveArtifacts artifacts: 'misc/plots/Rog_self_int/*/*/*/*.pdf'
     } 
 }
 	stage('Rogerro(2021) full Hamiltonian'){ steps{
 		sh 'jupyter nbconvert --to script tests/main_Rog.ipynb'
 		sh 'python tests/main_Rog.py'
-		archiveArtifacts artifacts: 'misc/plots/FFI/*/*/*/*.pdf'
+		archiveArtifacts artifacts: 'misc/plots/Rog_collective_osc/*/*/*/*.pdf'
     } 
 }
 	stage('Richers(2021) MF Homogenous QC_FFI'){ steps{
