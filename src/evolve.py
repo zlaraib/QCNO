@@ -5,6 +5,7 @@ from scipy.linalg import expm
 from qiskit.circuit import QuantumCircuit 
 from qiskit.circuit.library import ECRGate, IGate, RZGate, SXGate, XGate, CXGate
 from qiskit import transpile 
+from numpy import pi
 
 from qiskit.quantum_info import Pauli, Operator
 from qiskit.synthesis import TwoQubitBasisDecomposer
@@ -31,26 +32,41 @@ def apply_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
         qc.rzz(2 * coef, qubit1, qubit2)
         
 def custom_rzz(qc, theta, qubit1, qubit2):
+    # qc.barrier()
     qc.cx(qubit1, qubit2)
+    # qc.barrier()
     qc.rz(theta, qubit2)
+    # qc.barrier()
     qc.cx(qubit1, qubit2)
 
 def custom_rxx(qc, theta, qubit1, qubit2):
+    # qc.barrier()
     qc.h(qubit1)
+    # qc.barrier()
     qc.h(qubit2)
     custom_rzz(qc, theta, qubit1, qubit2)
+    # qc.barrier()
     qc.h(qubit1)
+    # qc.barrier()
     qc.h(qubit2)
 
 def custom_ryy(qc, theta, qubit1, qubit2):
+    # qc.barrier()
     qc.sdg(qubit1)
+    # qc.barrier()
     qc.sdg(qubit2)
+    # qc.barrier()
     qc.h(qubit1)
+    # qc.barrier()
     qc.h(qubit2)
     custom_rzz(qc, theta, qubit1, qubit2)
+    # qc.barrier()
     qc.h(qubit1)
+    # qc.barrier()
     qc.h(qubit2)
+    # qc.barrier()
     qc.s(qubit1)
+    # qc.barrier()
     qc.s(qubit2)
 
 def apply_custom_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
@@ -62,52 +78,133 @@ def apply_custom_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
     elif pauli1 == 'Z' and pauli2 == 'Z':
         custom_rzz(qc, angle, qubit1, qubit2)
 
-def two_qubit_KAK_decomp(qc, coef, qubit1, qubit2, pauli1, pauli2, backend,optimization_level):
-    if pauli1 == 'X' and pauli2 == 'X':
-        gate = QuantumCircuit(2)
-        gate.rxx(2 * coef, 0, 1)
-    elif pauli1 == 'Y' and pauli2 == 'Y':
-        gate = QuantumCircuit(2)
-        gate.ryy(2 * coef, 0, 1)
-    elif pauli1 == 'Z' and pauli2 == 'Z':
-        gate = QuantumCircuit(2)
-        gate.rzz(2 * coef, 0, 1)
+def cartan_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
+    """
+    Implements the optimized quantum circuit for exp(-i * θ/2 * (X⊗X + Y⊗Y + Z⊗Z))
+    using the minimal number of CNOTs and single-qubit gates as shown in Fig. 3.
+    """
+    theta = (2 * coef)
+    # if (pauli1 == 'Z' and pauli2 == 'Z') or (pauli1 == 'Y' and pauli2 == 'Y') or (pauli1 == 'X' and pauli2 == 'X'): #how to place these? is this source of error?
+        # First CNOT
+    qc.cx(qubit1, qubit2)
+    # First rotation gates
+    qc.rx(theta, qubit1)
+    qc.rz(theta, qubit2)
+    
+    # Middle Hadamard
+    qc.h(qubit1)
 
-    print("Original Circuit (before decomposition):")
-    print(gate.draw())
-    
-    # Calculate the matrix repesentation of the two-qubit gate
-    unitary_matrix = Operator(gate)
+    # Second CNOT
+    qc.cx(qubit1, qubit2)
+    # Middle S gate
+    qc.s(qubit1)
 
-    # Decompose the unitary into native gates
-    # TwoQubitBasisDecomposer: This class is used to decompose the unitary matrix into a sequence of gates that are supported by the target quantum hardware.
-    # The ECRGate is used as the native entangling gate.
-    # The euler_basis='U3' specifies that single-qubit rotations should be decomposed using U3 gates, which can then be further decomposed into RZ, SX, and X gates.
-    # The decomposed circuit (decomposed_circuit) is obtained, consisting of a series of native gates that collectively implement the original two-qubit gate.
-    decomposer = TwoQubitBasisDecomposer(ECRGate(), euler_basis='U3')
+    # Reverse Z rotation from earlier
+    qc.rz(-theta, qubit2)
     
-    # This is effectively calling decomposer.__call__(unitary_matrix)
-    decomposed_circuit = decomposer(unitary_matrix)
+    # Reverse Hadamard gate
+    qc.h(qubit1)
+
+    # Final CNOT
+    qc.cx(qubit1, qubit2)
     
-    print("\nDecomposed Circuit (before transpilation):")
-    # print(decomposed_circuit.draw())
-    # Print the gate counts in the decomposed circuit
-    gate_counts = decomposed_circuit .count_ops()
-    print("\nGate counts in the decomposed circuit:")
-    print(gate_counts)
-    print("Circuit depth in decomposed circuit= ", decomposed_circuit.depth())
-        
-    transpiled_circuit = transpile(decomposed_circuit, basis_gates=['rz', 'sx', 'x', 'cx'], optimization_level=optimization_level)
-    print("\nTranspiled Circuit (IBM native gates):")
-    # print(transpiled_circuit.draw())
-    # Step 6: Print the gate counts in the decomposed circuit
-    gate_counts = transpiled_circuit.count_ops()
-    print("\nGate counts in the transpiled circuit:")
-    print(gate_counts)
-    print("Circuit depth in transpiled circuit= ", transpiled_circuit.depth())
-      
-    # Add the decomposed gates to the main quantum circuit
-    qc.append(transpiled_circuit.to_instruction(), [qubit1, qubit2])
+    # Final X rotations
+    qc.rx(pi / 2, qubit1)
+    qc.rx(-pi / 2, qubit2)
+    
+def cartan_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
+    """
+    Implements the optimized quantum circuit for exp(-i * θ/2 * (X⊗X + Y⊗Y + Z⊗Z))
+    using the minimal number of CNOTs and single-qubit gates.
+    """
+    theta = (2 * coef) + pi/2
+    
+    # Barrier before starting the operation to group the whole sequence
+    qc.barrier()
+
+    # First CNOT
+    qc.cx(qubit1, qubit2)
+
+    # Barrier after the first CNOT to isolate the next set of operations
+    qc.barrier()
+
+    # First rotation gates
+    qc.rx(theta, qubit1)
+    qc.rz(theta, qubit2)
+    
+    # Barrier after the rotations
+    qc.barrier()
+
+    # Middle Hadamard
+    qc.h(qubit1)
+
+    # Barrier before the second CNOT to separate logical operations
+    qc.barrier()
+
+    # Second CNOT
+    qc.cx(qubit1, qubit2)
+    
+    # Middle S gate
+    qc.s(qubit1)
+
+    # Barrier before reversing the operations
+    qc.barrier()
+
+    # Reverse Z rotation from earlier
+    qc.rz(-theta, qubit2)
+    
+    # Reverse Hadamard gate
+    qc.h(qubit1)
+
+    # Barrier before final CNOT to keep the final operations isolated
+    qc.barrier()
+
+    # Final CNOT
+    qc.cx(qubit1, qubit2)
+    
+    # Final X rotations
+    qc.rx(np.pi / 2, qubit1)
+    qc.rx(-np.pi / 2, qubit2)
+
+    # Final barrier to mark the end of this block of operations
+    qc.barrier()
+
+
+
+def optimized_two_qubit_circuit(qc, theta, qubit1, qubit2): #has no cnot min error in entaglement
+    """Integrates the optimized two-qubit circuit into the given quantum circuit."""
+    # Apply the Uq gate with theta = -pi/2 and phi = pi/2 to first qubit.
+    qc.u(-pi/2, 0, 0, qubit1)
+    
+    # Apply the RZZ gate to generate the ZZ gate in the paper with theta = pi/2
+    qc.rzz(pi/2, qubit1, qubit2)
+    
+    # Apply the Uq gate with theta = pi/2 and phi = pi to first qubit
+    qc.u(pi/2, pi/2, -pi/2, qubit1)
+    
+    # Apply the Uq gate on the second qubit with theta = 2*theta
+    qc.u(2*theta, 0, 0, qubit2)
+    
+    # Apply the Rz gate with appropriate lambdas
+    qc.rz(2*theta - 3*pi/2, qubit1)
+    qc.rz(-3*pi/2, qubit2)
+    
+    # Apply the RZZ gate with theta = pi/2
+    qc.rzz(pi/2, qubit1, qubit2)
+    
+    # Apply the Uq gate again to first qubit
+    qc.u(-pi/2, 0, 0, qubit1)
+    qc.u(2*theta, 0, 0, qubit2)
+    
+    # Apply the Rz gate with lambda = -pi/2 to second qubit
+    qc.rz(-pi/2, qubit2)
+    
+    # Apply the RZZ gate with theta = pi/2
+    qc.rzz(pi/2, qubit1, qubit2)
+    
+    # Apply the final Uq gate to first qubit
+    qc.u(pi/2, pi/2, -pi/2, qubit1)
+
 
 def evolve_and_measure_circuit(time, backend_name,backend,optimization_level, N, omega, B, N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order, measure='Z'):
     pauli_terms = construct_hamiltonian(N, omega, B, N_sites, Δx,  p,theta_nu)
@@ -148,13 +245,13 @@ def evolve_and_measure_circuit(time, backend_name,backend,optimization_level, N,
                 #coef * dt_substep: The rotation angle, which is the coefficient coef multiplied by the time step dt_substep
                 apply_single_qubit_gate(qc, coef * dt_substep, qubits[0], pauli_str[qubits[0]])
             elif len(qubits) == 2:
-                # if backend_name == "manila" or backend_name == "ibm" : # decomposes each 2 qubit gate seperately in the circuit for 1 time step and optimizes those 2-qubit gates 
-                #     two_qubit_KAK_decomp(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]], backend, optimization_level)
-                # else : 
-                    apply_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
+                    # apply_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
                     # print(f"Applying term: {coef} * {pauli.to_label()} on qubits {qubits}")
-                    # apply_custom_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
-
+                    apply_custom_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
+                    # cartan_two_qubit_gate(qc, (coef * dt_substep)/N_sites, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
+                    # optimized_two_qubit_circuit(qc,- coef * dt_substep/N_sites, qubits[0], qubits[1])
+                    # # Insert SWAP gate after the two-qubit gate
+                    # qc.swap(qubits[0], qubits[1])
 
       
     # transform basis from Z (up/down or |0>/|1>) to X (equal super position of |up>/ |down> to get the x basis =|+>/|->) using hadamard on the first qubit(b/c we are measurng the first qubit only)
