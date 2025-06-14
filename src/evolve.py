@@ -245,9 +245,9 @@ def evolve_and_measure_circuit(time, backend_name,backend,optimization_level, N,
                 #coef * dt_substep: The rotation angle, which is the coefficient coef multiplied by the time step dt_substep
                 apply_single_qubit_gate(qc, coef * dt_substep, qubits[0], pauli_str[qubits[0]])
             elif len(qubits) == 2:
-                    # apply_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
+                    apply_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
                     # print(f"Applying term: {coef} * {pauli.to_label()} on qubits {qubits}")
-                    apply_custom_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
+                    # apply_custom_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
                     # cartan_two_qubit_gate(qc, (coef * dt_substep)/N_sites, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
                     # optimized_two_qubit_circuit(qc,- coef * dt_substep/N_sites, qubits[0], qubits[1])
                     # # Insert SWAP gate after the two-qubit gate
