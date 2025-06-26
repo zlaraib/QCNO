@@ -227,7 +227,12 @@ def evolve_and_measure_circuit(time, backend_name,backend,optimization_level, N,
             qc.x(i) # inital state for the richers test (first half chain up, other half chain down)
     else:
         dt_substep = dt_substep 
-        qc.x(range(half_N_sites)) # initial state for rog and vac osc tests
+        if theta_nu == 1000 : # for Josh test
+            for i in range(half_N_sites + 1, N_sites): 
+                qc.x(i) # inital state for the Josh test (first half chain + 1 up, other half -1 chain down)
+        else:
+            qc.x(range(half_N_sites)) # initial state for rog and vac osc tests
+
 
 
     for _ in range(trotter_steps):
