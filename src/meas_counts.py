@@ -14,14 +14,17 @@ from qiskit.transpiler.passes import DynamicalDecoupling, ALAPSchedule
 from qiskit.transpiler import PassManager
 from qiskit.transpiler import InstructionDurations
 import numpy as np
+from qiskit_aer.noise import NoiseModel
+from qiskit_ibm_runtime.fake_provider import FakeManilaV2
+from qiskit_ibm_runtime import QiskitRuntimeService
 # from mitiq import zne
 # from mitiq.zne.scaling import fold_gates_from_left
 # from mitiq.zne.inference import RichardsonFactory
 
-def meas_counts(t,times, N, omega, B, N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order, measure, backend_name, backend,optimization_level, shots):
+def meas_counts(t,times, N, x,Δp,L, shape_name, omega, B,B_pert, N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order, measure, backend_name, backend,optimization_level, shots,periodic):
 
     # Evolve and measure circuit based on the provided Pauli term (X, Y, Z)
-    qc = evolve_and_measure_circuit(t,  backend_name,backend,optimization_level, N, omega, B, N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order, measure=measure)
+    qc= evolve_and_measure_circuit(t, backend_name,backend,optimization_level, N,x,Δp,L, shape_name, omega, B,B_pert,  N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order,periodic, measure=measure)
     # for step in range(len(times)):
     #     for i in range(N_sites - 1):
     #         qc.cx(i, i + 1)
@@ -30,7 +33,7 @@ def meas_counts(t,times, N, omega, B, N_sites, Δx,  p,theta_nu, trotter_steps, 
         #     for i in range(0, N_sites - 1, 2):
         #         qc.swap(i, i + 1)
         
-    print("\nOriginal Circuit:")
+    # print("\nOriginal Circuit:")
     # print(qc.draw())
     # Print the gate counts in the original circuit
     gate_counts = qc.count_ops()
@@ -39,7 +42,7 @@ def meas_counts(t,times, N, omega, B, N_sites, Δx,  p,theta_nu, trotter_steps, 
     # # Circuit depth = The maximum number of gates (or operations) applied sequentially on any qubit in the circuit. This is equivalent to the longest "path" of operations in the circuit.
     # # Depth provides a measure of how many time steps are required to execute the circuit i.e. layers of gates reuired in the circuit to execute from start to finish.
     print("Circuit depth= ", qc.depth())
-
+    # qc = transpile(qc, basis_gates=NoiseModel.from_backend(backend).basis_gates, coupling_map=backend.configuration().coupling_map, optimization_level=optimization_level)
     if backend_name == "manila" or backend_name == "ibm" : # decomposes all the 2 qubit gates in the circuit for 1 time step and optimizes all those 2-qubit gates as a whole for each time step. 
 
         # Decompose two-qubit gates using KAK decomposition
@@ -186,9 +189,7 @@ def meas_counts(t,times, N, omega, B, N_sites, Δx,  p,theta_nu, trotter_steps, 
         print("Shot counts after transpilation : ", job.get_counts())
         isa_circuit = qc  # added for consistency with function return for all backends (not an actual ISA circuit, ionq doesnt have those)
     else:
-        if backend_name == 'aer':
-            # Add the save_density_matrix instruction
-            qc.save_density_matrix()
+
             
         pm = generate_preset_pass_manager(backend=backend, optimization_level=optimization_level)
         isa_circuit = pm.run(qc)
@@ -197,15 +198,13 @@ def meas_counts(t,times, N, omega, B, N_sites, Δx,  p,theta_nu, trotter_steps, 
         job = sampler.run([isa_circuit], shots=shots)
         result = job.result()
         pub_result = result[0]
-        counts = pub_result.data.c.get_counts()
+        # counts = pub_result.data.c.get_counts() # used for when I was measuring on the first qubit only 
+        counts = result[0].data.meas.get_counts()
         print("Shot counts after transpilation : ", counts)
         result = backend.run(isa_circuit).result()
         if backend_name == 'aer':
             # Retrieve the density matrix
             density_matrix = DensityMatrix(result.data()["density_matrix"])
-            print("Density Matrix:")
-            print(density_matrix)
-
 
     # # Print gate counts= Total number of gates.
     # gate_counts = isa_circuit.count_ops()
