@@ -9,11 +9,13 @@ from numpy import pi
 
 from qiskit.quantum_info import Pauli, Operator
 from qiskit.synthesis import TwoQubitBasisDecomposer
+from qiskit.circuit.library import StatePreparation
 
 from momentum import momentum
 from constants import hbar, c , eV, MeV, GeV, G_F, kB
 from geometric_func import geometric_func
 from hamiltonian import construct_hamiltonian
+from perturb import pert_circuit
 
 def apply_single_qubit_gate(qc, coef, qubit, pauli):
     if pauli == 'X':
@@ -81,7 +83,7 @@ def apply_custom_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
 def cartan_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
     """
     Implements the optimized quantum circuit for exp(-i * θ/2 * (X⊗X + Y⊗Y + Z⊗Z))
-    using the minimal number of CNOTs and single-qubit gates as shown in Fig. 3.
+    using the minimal number of CNOTs and single-qubit gates as shown in Fig. 3 DOI: 10.1103/PhysRevD.108.083039
     """
     theta = (2 * coef)
     # if (pauli1 == 'Z' and pauli2 == 'Z') or (pauli1 == 'Y' and pauli2 == 'Y') or (pauli1 == 'X' and pauli2 == 'X'): #how to place these? is this source of error?
@@ -112,10 +114,10 @@ def cartan_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
     qc.rx(pi / 2, qubit1)
     qc.rx(-pi / 2, qubit2)
     
-def cartan_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
+def cartan_two_qubit_gate(qc, coef, qubit1, qubit2):
     """
     Implements the optimized quantum circuit for exp(-i * θ/2 * (X⊗X + Y⊗Y + Z⊗Z))
-    using the minimal number of CNOTs and single-qubit gates.
+    using the minimal number of CNOTs and single-qubit gates DOI: 10.1103/PhysRevD.108.083039
     """
     theta = (2 * coef) + pi/2
     
@@ -173,7 +175,7 @@ def cartan_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
 
 def optimized_two_qubit_circuit(qc, theta, qubit1, qubit2): #has no cnot min error in entaglement
     """Integrates the optimized two-qubit circuit into the given quantum circuit."""
-    # Apply the Uq gate with theta = -pi/2 and phi = pi/2 to first qubit.
+    # Apply the Uq gate with theta = -pi/2 and phi = pi/2 to first qubit. 10.1103/PhysRevD.107.023007
     qc.u(-pi/2, 0, 0, qubit1)
     
     # Apply the RZZ gate to generate the ZZ gate in the paper with theta = pi/2
@@ -206,8 +208,8 @@ def optimized_two_qubit_circuit(qc, theta, qubit1, qubit2): #has no cnot min err
     qc.u(pi/2, pi/2, -pi/2, qubit1)
 
 
-def evolve_and_measure_circuit(time, backend_name,backend,optimization_level, N, omega, B, N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order, measure='Z'):
-    pauli_terms = construct_hamiltonian(N, omega, B, N_sites, Δx,  p,theta_nu)
+def evolve_and_measure_circuit(time, backend_name,backend,optimization_level, N,x,Δp,L, shape_name, omega, B,B_pert,  N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order,periodic, measure='Z'):
+    pauli_terms = construct_hamiltonian(N, x,Δp,L, shape_name,omega, B, N_sites, Δx,  p,theta_nu,periodic)
     # print("Pauli Terms:", pauli_terms)
     
     dt = time / trotter_steps
@@ -219,21 +221,32 @@ def evolve_and_measure_circuit(time, backend_name,backend,optimization_level, N,
         pauli_terms = pauli_terms + pauli_terms[::-1]
         
     
-    qc = QuantumCircuit(N_sites, 1)
+    qc = QuantumCircuit(N_sites, N_sites)
     half_N_sites = N_sites // 2
     if theta_nu == 1.74532925E-8 : 
         dt_substep = dt_substep/hbar # since the unitary is divided by hbar in richers test only 
-        for i in range(half_N_sites, N_sites):
-            qc.x(i) # inital state for the richers test (first half chain up, other half chain down)
+        # for i in range(half_N_sites, N_sites):
+        #     qc.x(i) # inital state for the richers test (first half chain up, other half chain down)
+        bitstr = '0'*half_N_sites + '1'*(N_sites - half_N_sites)
+        prep = StatePreparation(bitstr)  # prepares that computational basis state
+        qc.append(prep, qargs=range(N_sites))
+
     else:
         dt_substep = dt_substep 
         if theta_nu == 1000 : # for Josh test
-            for i in range(half_N_sites + 1, N_sites): 
-                qc.x(i) # inital state for the Josh test (first half chain + 1 up, other half -1 chain down)
+            # for i in range(half_N_sites + 1, N_sites): # inital state for the Josh test (first half chain + 1 up, other half -1 chain down)
+            for i in range(half_N_sites, N_sites): 
+                qc.x(i) 
         else:
             qc.x(range(half_N_sites)) # initial state for rog and vac osc tests
 
 
+    
+    for step in range(trotter_steps):
+        if step == 0 and B_pert is not None:
+        # Apply the perturbation only at the first step
+            pert_circuit(qc, dt_substep, omega, B_pert, N_sites, measure=measure)
+            # print("After pert qc", qc)
 
     for _ in range(trotter_steps):
         for coef, pauli in pauli_terms:
@@ -253,16 +266,16 @@ def evolve_and_measure_circuit(time, backend_name,backend,optimization_level, N,
                     apply_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
                     # print(f"Applying term: {coef} * {pauli.to_label()} on qubits {qubits}")
                     # apply_custom_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
-                    # cartan_two_qubit_gate(qc, (coef * dt_substep)/N_sites, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
+                    # cartan_two_qubit_gate(qc, (coef * dt_substep)/N_sites, qubits[0], qubits[1])
                     # optimized_two_qubit_circuit(qc,- coef * dt_substep/N_sites, qubits[0], qubits[1])
-                    # # Insert SWAP gate after the two-qubit gate
+                    # Insert SWAP gate after the two-qubit gate
                     # qc.swap(qubits[0], qubits[1])
 
       
     # transform basis from Z (up/down or |0>/|1>) to X (equal super position of |up>/ |down> to get the x basis =|+>/|->) using hadamard on the first qubit(b/c we are measurng the first qubit only)
     # the measurement of counts in x basis is done later in main script to compute <sigma_x>
     if measure == 'X':
-        qc.h(0)
+        qc.h(range(N_sites))  # Apply Hadamard to all qubits for X basis measurement
         
     # prepare the quantum state by transforming basis from Z to Y using sdg on the first qubit(b/c we are measurng the first qubit only)
     # Similarly, the 'Sdg' gate (S-dagger) is applied, which corresponds to the inverse of the phase gate 'S'. This introduces a phase shift of - pi/2.
@@ -270,10 +283,13 @@ def evolve_and_measure_circuit(time, backend_name,backend,optimization_level, N,
     
     # the measurement of counts in Y basis is done later in main script to compute <sigma_y>
     elif measure == 'Y':
-        qc.sdg(0)
-        qc.h(0)          
-        
-    qc.measure(0, 0)
+        qc.sdg(range(N_sites))  # Apply Sdg to all qubits for Y basis measurement
+        qc.h(range(N_sites))  # Then apply Hadamard       
+    
+    if backend_name == 'aer':
+        # Add the save_density_matrix instruction
+        qc.save_density_matrix()
+    qc.measure_all()  # Measure all qubits.
     return qc
 
 
