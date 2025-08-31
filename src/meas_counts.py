@@ -10,28 +10,15 @@ from qiskit.quantum_info import Operator
 from qiskit.synthesis import TwoQubitBasisDecomposer
 from evolve import evolve_and_measure_circuit
 from qiskit.quantum_info import Statevector,DensityMatrix
-from qiskit.transpiler.passes import DynamicalDecoupling, ALAPSchedule
-from qiskit.transpiler import PassManager
-from qiskit.transpiler import InstructionDurations
 import numpy as np
 from qiskit_aer.noise import NoiseModel
 from qiskit_ibm_runtime.fake_provider import FakeManilaV2
 from qiskit_ibm_runtime import QiskitRuntimeService
-# from mitiq import zne
-# from mitiq.zne.scaling import fold_gates_from_left
-# from mitiq.zne.inference import RichardsonFactory
 
 def meas_counts(t,times, N, x,Δp,L, shape_name, omega, B,B_pert, N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order, measure, backend_name, backend,optimization_level, shots,periodic):
 
     # Evolve and measure circuit based on the provided Pauli term (X, Y, Z)
     qc= evolve_and_measure_circuit(t, backend_name,backend,optimization_level, N,x,Δp,L, shape_name, omega, B,B_pert,  N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order,periodic, measure=measure)
-    # for step in range(len(times)):
-    #     for i in range(N_sites - 1):
-    #         qc.cx(i, i + 1)
-        
-        # if step > 0:  # Apply SWAP after the first time step
-        #     for i in range(0, N_sites - 1, 2):
-        #         qc.swap(i, i + 1)
         
     # print("\nOriginal Circuit:")
     # print(qc.draw())
@@ -87,36 +74,6 @@ def meas_counts(t,times, N, x,Δp,L, shape_name, omega, B,B_pert, N_sites, Δx, 
         # transpiled_circuit = transpile(new_qc, basis_gates=['rz', 'sx','x', 'cx'], optimization_level=optimization_level)
         transpiled_circuit = transpile(new_qc,basis_gates=['rz','sx', 'x','cx', 'u3'], optimization_level=optimization_level)
         
-        # trying dynamical decoupling 
-        # # Get backend properties
-        # properties = backend.properties()
-
-        # # Manually extract durations
-        # durations = InstructionDurations.from_backend(backend)
-
-        # # Step 1: Transpile the circuit
-        # transpiled_circuit = transpile(
-        #     new_qc,
-        #     backend=backend,
-        #     basis_gates=['rz', 'sx', 'x', 'cx', 'u3'],
-        #     optimization_level=optimization_level
-        # )
-
-        # # Step 2: Schedule the circuit
-        # schedule_pass = ALAPSchedule(durations=durations)
-        # scheduled_pm = PassManager(schedule_pass)
-        # scheduled_circuit = scheduled_pm.run(transpiled_circuit)
-
-        # # Step 3: Add dynamical decoupling
-        # dd_sequence = [XGate(), XGate()]
-        # dd_pass = DynamicalDecoupling(durations, dd_sequence)
-        # dd_pm = PassManager(dd_pass)
-        # dd_circuit = dd_pm.run(scheduled_circuit)
-
-        # qc = dd_circuit  # final circuit with DD
-
-        # print("\nTranspiled Circuit (IBM native gates):")
-        # print(transpiled_circuit.draw())
 
         # Print the gate counts in the transpiled circuit
         gate_counts = transpiled_circuit.count_ops()
@@ -174,17 +131,6 @@ def meas_counts(t,times, N, x,Δp,L, shape_name, omega, B,B_pert, N_sites, Δx, 
                 z_exp += sign * count
             return z_exp / shots
 
-        # # Now apply ZNE
-        # factory = RichardsonFactory(scale_factors=[1.0, 1.5, 2.0])
-        # mitigated_result = zne.execute_with_zne(
-        #     qc, 
-        #     execute_circuit, 
-        #     factory=factory,
-        #     folding=fold_gates_from_left
-        # )
-
-        # print("ZNE-mitigated observable result:", mitigated_result)
-        # print(job.job_id())
         counts = job.get_counts()
         print("Shot counts after transpilation : ", job.get_counts())
         isa_circuit = qc  # added for consistency with function return for all backends (not an actual ISA circuit, ionq doesnt have those)
