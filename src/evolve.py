@@ -227,19 +227,21 @@ def evolve_and_measure_circuit(time, backend_name,backend,optimization_level, N,
         dt_substep = dt_substep/hbar # since the unitary is divided by hbar in richers test only 
         # for i in range(half_N_sites, N_sites):
         #     qc.x(i) # inital state for the richers test (first half chain up, other half chain down)
-        bitstr = '0'*half_N_sites + '1'*(N_sites - half_N_sites)
-        prep = StatePreparation(bitstr)  # prepares that computational basis state
+        bitstr = '0'*half_N_sites + '1'*(N_sites - half_N_sites) # actual initial condition of sherwood
+        prep = StatePreparation(bitstr[::-1])  # reverse due to qubit order in Qiskit
         qc.append(prep, qargs=range(N_sites))
 
     else:
         dt_substep = dt_substep 
         if theta_nu == 1000 : # for Josh test
             # for i in range(half_N_sites + 1, N_sites): # inital state for the Josh test (first half chain + 1 up, other half -1 chain down)
-            for i in range(half_N_sites, N_sites): 
-                qc.x(i) 
+            # for i in range(half_N_sites, N_sites): 
+            #     qc.x(i) 
+            bitstr = '0'*half_N_sites + '1'*(N_sites - half_N_sites)
+            prep = StatePreparation(bitstr[::-1])  
+            qc.append(prep, qargs=range(N_sites))
         else:
             qc.x(range(half_N_sites)) # initial state for rog and vac osc tests
-
 
     
     for step in range(trotter_steps):
