@@ -10,7 +10,7 @@ def flat_top(Δp, ξ):
     return np.heaviside(1/2 - abs(ξ), 0)
 
 def triangular(Δp, ξ):
-    return np.heaviside(1 - abs(ξ), 0)
+    return (1 - abs(ξ)) * np.heaviside(1 - abs(ξ), 0)
 
 def none(Δp, ξ):
     return 1 
