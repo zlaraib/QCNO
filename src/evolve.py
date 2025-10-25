@@ -234,12 +234,14 @@ def evolve_and_measure_circuit(time, backend_name,backend,optimization_level, N,
     else:
         dt_substep = dt_substep 
         if theta_nu == 1000 : # for Josh test
-            # for i in range(half_N_sites + 1, N_sites): # inital state for the Josh test (first half chain + 1 up, other half -1 chain down)
-            # for i in range(half_N_sites, N_sites): 
-            #     qc.x(i) 
-            bitstr = '0'*half_N_sites + '1'*(N_sites - half_N_sites)
+            # inital state for the Josh test (first half chain + 1 up, other half -1 chain down)
+            # String labels: Labels like '01' can initialize the qubits, where '01' means qubit 0 is |1⟩ (down) and qubit 1 is |0⟩ (up).
+            bitstr = '0'*(half_N_sites+ 1) + '1'*(N_sites - half_N_sites - 1)
+            print("bitstr = ",bitstr )
             prep = StatePreparation(bitstr[::-1])  
-            qc.append(prep, qargs=range(N_sites))
+            # prep = StatePreparation(bitstr)  
+            print("prep=", prep)
+            qc.append(prep, qargs=range(N_sites)) # Append the StatePreparation gate to the circuit on all N_sites qubits
         else:
             qc.x(range(half_N_sites)) # initial state for rog and vac osc tests
 
