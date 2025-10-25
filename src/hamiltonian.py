@@ -17,7 +17,9 @@ def construct_hamiltonian(N, x,Δp,L, shape_name,omega, B, N_sites, Δx,  p,thet
             geometric_factor = geometric_func(p, p_hat, i, j, theta_nu)
             shape_function= shape_func(x, Δp, i, j, L, shape_name, periodic)
             interaction_strength = ((1/2) * np.sqrt(2) * G_F * (N[i] + N[j]) / (2 * ((Δx)**3))) * geometric_factor *shape_function
-            
+            # print("geometric_factor= ",geometric_factor)
+            # print("shape_function= ",shape_function)
+            # print("interaction_strength= ", interaction_strength)
             if interaction_strength != 0:
                 XX = Pauli(f'{"I"*i}X{"I"*(j-i-1)}X{"I"*(N_sites-j-1)}')
                 YY = Pauli(f'{"I"*i}Y{"I"*(j-i-1)}Y{"I"*(N_sites-j-1)}')
