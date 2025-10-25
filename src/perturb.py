@@ -7,36 +7,36 @@ from qiskit.quantum_info import Pauli, Operator
 def construct_pert_hamiltonian( omega, B_pert, N_sites):
     pauli_terms = []
 
-    # for i in range(N_sites):
+    for i in range(N_sites):
 
-                # Xi = Pauli(f'{"I"*i}X{"I"*(N_sites-i-1)}')
-                # Yi = Pauli(f'{"I"*i}Y{"I"*(N_sites-i-1)}')
-                # Zi = Pauli(f'{"I"*i}Z{"I"*(N_sites-i-1)}')
-                
-                # pauli_terms.append(((omega[i] / 2) * B_pert[0], Xi))
-                # pauli_terms.append(((omega[i] / 2) * B_pert[1], Yi))
-                # pauli_terms.append(((omega[i] / 2) * B_pert[2], Zi))       
-    # return pauli_terms
-
-    for i in range(N_sites - 1):
-        for j in range(i + 1, N_sites):
                 Xi = Pauli(f'{"I"*i}X{"I"*(N_sites-i-1)}')
                 Yi = Pauli(f'{"I"*i}Y{"I"*(N_sites-i-1)}')
                 Zi = Pauli(f'{"I"*i}Z{"I"*(N_sites-i-1)}')
                 
-                pauli_terms.append(((omega[i] / 2) * B_pert[0]/ (N_sites - 1), Xi))
-                pauli_terms.append(((omega[i] / 2) * B_pert[1]/ (N_sites - 1), Yi))
-                pauli_terms.append(((omega[i] / 2) * B_pert[2]/ (N_sites - 1), Zi))
-                
-                Xj = Pauli(f'{"I"*j}X{"I"*(N_sites-j-1)}')
-                Yj = Pauli(f'{"I"*j}Y{"I"*(N_sites-j-1)}')
-                Zj = Pauli(f'{"I"*j}Z{"I"*(N_sites-j-1)}')
-                
-                pauli_terms.append(((omega[j] / 2) * B_pert[0]/ (N_sites - 1), Xj))
-                pauli_terms.append(((omega[j] / 2) * B_pert[1]/ (N_sites - 1), Yj))
-                pauli_terms.append(((omega[j] / 2) * B_pert[2]/ (N_sites - 1), Zj))
-    
+                pauli_terms.append(( B_pert[0], Xi))
+                pauli_terms.append(( B_pert[1], Yi))
+                pauli_terms.append(( B_pert[2], Zi))       
     return pauli_terms
+
+    # for i in range(N_sites - 1):
+    #     for j in range(i + 1, N_sites):
+    #             Xi = Pauli(f'{"I"*i}X{"I"*(N_sites-i-1)}')
+    #             Yi = Pauli(f'{"I"*i}Y{"I"*(N_sites-i-1)}')
+    #             Zi = Pauli(f'{"I"*i}Z{"I"*(N_sites-i-1)}')
+                
+    #             pauli_terms.append(((omega[i] / 2) * B_pert[0]/ (N_sites - 1), Xi))
+    #             pauli_terms.append(((omega[i] / 2) * B_pert[1]/ (N_sites - 1), Yi))
+    #             pauli_terms.append(((omega[i] / 2) * B_pert[2]/ (N_sites - 1), Zi))
+                
+    #             Xj = Pauli(f'{"I"*j}X{"I"*(N_sites-j-1)}')
+    #             Yj = Pauli(f'{"I"*j}Y{"I"*(N_sites-j-1)}')
+    #             Zj = Pauli(f'{"I"*j}Z{"I"*(N_sites-j-1)}')
+                
+    #             pauli_terms.append(((omega[j] / 2) * B_pert[0]/ (N_sites - 1), Xj))
+    #             pauli_terms.append(((omega[j] / 2) * B_pert[1]/ (N_sites - 1), Yj))
+    #             pauli_terms.append(((omega[j] / 2) * B_pert[2]/ (N_sites - 1), Zj))
+    
+    # return pauli_terms
 def apply_single_qubit_gate(qc, coef, qubit, pauli):
     if pauli == 'X':
         qc.rx(2 * coef, qubit)
