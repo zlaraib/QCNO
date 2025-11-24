@@ -246,11 +246,11 @@ def evolve_and_measure_circuit(time, backend_name,backend,optimization_level, N,
             qc.x(range(half_N_sites)) # initial state for rog and vac osc tests
 
     
-    for step in range(trotter_steps):
-        if step == 0 and B_pert is not None:
+    if B_pert is not None:
+
         # Apply the perturbation only at the first step
-            pert_circuit(qc, dt_substep, omega, B_pert, N_sites, measure=measure)
-            # print("After pert qc", qc)
+        pert_circuit(qc, dt_substep, omega, B_pert, N_sites, measure=measure)
+        # print("After pert qc", qc)
 
     for _ in range(trotter_steps):
         for coef, pauli in pauli_terms:
