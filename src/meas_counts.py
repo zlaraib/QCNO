@@ -15,10 +15,10 @@ from qiskit_aer.noise import NoiseModel
 from qiskit_ibm_runtime.fake_provider import FakeManilaV2
 from qiskit_ibm_runtime import QiskitRuntimeService
 
-def meas_counts(t,times, N, x,Δp,L, shape_name, omega, B,B_pert, N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order, measure, backend_name, backend,optimization_level, shots,periodic):
+def meas_counts(t, τ, N, x,Δp,L, shape_name, omega, B,B_pert, N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order, measure, backend_name, backend,optimization_level, shots,periodic):
 
     # Evolve and measure circuit based on the provided Pauli term (X, Y, Z)
-    qc= evolve_and_measure_circuit(t, backend_name,backend,optimization_level, N,x,Δp,L, shape_name, omega, B,B_pert,  N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order,periodic, measure=measure)
+    qc= evolve_and_measure_circuit(t, τ, backend_name,backend,optimization_level, N,x,Δp,L, shape_name, omega, B,B_pert,  N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order,periodic, measure=measure)
         
     # print("\nOriginal Circuit:")
     # print(qc.draw())
