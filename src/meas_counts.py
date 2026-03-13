@@ -8,18 +8,16 @@ from qiskit import transpile
 from qiskit.circuit import QuantumCircuit
 from qiskit.quantum_info import Operator
 from qiskit.synthesis import TwoQubitBasisDecomposer
-from evolve import evolve_and_measure_circuit
+from evolve import add_measurement_to_circuit
 from qiskit.quantum_info import Statevector,DensityMatrix
 import numpy as np
 from qiskit_aer.noise import NoiseModel
 from qiskit_ibm_runtime.fake_provider import FakeManilaV2
 from qiskit_ibm_runtime import QiskitRuntimeService
 
-def meas_counts(t, τ, N, x,Δp,L, shape_name, omega, B,B_pert, N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order, measure, backend_name, backend,optimization_level, shots,periodic):
+def meas_counts(qc_base, measure, N_sites, backend_name, backend, optimization_level, shots):  
+    qc = add_measurement_to_circuit(qc_base, N_sites, measure=measure)
 
-    # Evolve and measure circuit based on the provided Pauli term (X, Y, Z)
-    qc= evolve_and_measure_circuit(t, τ, backend_name,backend,optimization_level, N,x,Δp,L, shape_name, omega, B,B_pert,  N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order,periodic, measure=measure)
-        
     # print("\nOriginal Circuit:")
     # print(qc.draw())
     # Print the gate counts in the original circuit
@@ -151,6 +149,14 @@ def meas_counts(t, τ, N, x,Δp,L, shape_name, omega, B,B_pert, N_sites, Δx,  p
         if backend_name == 'aer':
             # Retrieve the density matrix
             density_matrix = DensityMatrix(result.data()["density_matrix"])
+            
+            from qiskit.quantum_info import Statevector
+            state_data = result.data()["statevector"]
+            statevector = Statevector(state_data)
+            
+            print("Statevector retrieved successfully.")
+            # Example: print the first 4 amplitudes
+            print("print the first 4 amplitudes=", statevector.data[:4]) 
 
     # # Print gate counts= Total number of gates.
     # gate_counts = isa_circuit.count_ops()
@@ -169,6 +175,6 @@ def meas_counts(t, τ, N, x,Δp,L, shape_name, omega, B,B_pert, N_sites, Δx,  p
     # circuit_size = isa_circuit.size()
     # print(f"Size of the circuit at time step {t}: {circuit_size}")
     if backend_name == 'aer':
-        return counts, isa_circuit, density_matrix
+        return counts, isa_circuit, density_matrix, statevector
     else:
-        return counts, isa_circuit
+        return counts, isa_circuit 
