@@ -10,17 +10,37 @@ from shape_func import shape_func
 
 def construct_hamiltonian(N, x,Δp,L, shape_name,omega, B, N_sites, Δx,  p,theta_nu,periodic):
     pauli_terms = []
+    # Sort sites by x coordinate, like Julia sortperm(state.xyz[:,1])
+    perm = np.argsort(x)
+
+    x = np.asarray(x)[perm]
+    N = np.asarray(N)[perm]
+    omega = np.asarray(omega)[perm]
+    p = np.asarray(p)[perm]
+
     p_mod, p_hat = momentum(p, N_sites)  
-    
+
     for i in range(N_sites - 1):
+        print(
+        "Python site", i,
+        "x=", x[i],
+        "p=", p[i],
+        "N=", N[i],
+        "omega=", omega[i])
         for j in range(i + 1, N_sites):
             geometric_factor = geometric_func(p, p_hat, i, j, theta_nu)
             shape_function= shape_func(x, Δp, i, j, L, shape_name, periodic)
             interaction_strength = ((1/2) * np.sqrt(2) * G_F * (N[i] + N[j]) / (2 * ((Δx)**3))) * geometric_factor *shape_function
-            # print("geometric_factor= ",geometric_factor)
-            # print("shape_function= ",shape_function)
-            # print("interaction_strength= ", interaction_strength)
+            print("geometric_factor from site ", i, " and site ", j, "= ",geometric_factor)
+            print("shape_function from site ", i, " and site ", j, "= ",shape_function)
+            print("interaction_strength from site ", i, " and site ", j, "= ", interaction_strength)
             if interaction_strength != 0:
+                
+                print(
+                    f"H 2-site term: pair=({i+1},{j+1}), "
+                    f"ops=(SzSz,SpSm,SmSp), coef={4*interaction_strength}, "
+                    f"angle_factor={dt_substep_like if False else 'set later'}"
+                )
                 XX = Pauli(f'{"I"*i}X{"I"*(j-i-1)}X{"I"*(N_sites-j-1)}')
                 YY = Pauli(f'{"I"*i}Y{"I"*(j-i-1)}Y{"I"*(N_sites-j-1)}')
                 ZZ = Pauli(f'{"I"*i}Z{"I"*(j-i-1)}Z{"I"*(N_sites-j-1)}')
@@ -47,3 +67,4 @@ def construct_hamiltonian(N, x,Δp,L, shape_name,omega, B, N_sites, Δx,  p,thet
                 pauli_terms.append(((omega[j] / 2) * B[2]/ (N_sites - 1), Zj))
     
     return pauli_terms
+
