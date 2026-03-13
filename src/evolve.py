@@ -15,7 +15,7 @@ from momentum import momentum
 from constants import hbar, c , eV, MeV, GeV, G_F, kB
 from geometric_func import geometric_func
 from hamiltonian import construct_hamiltonian
-from perturb import pert_circuit
+from perturb import pert_circuit, pauli_label_to_qiskit_ops
 
 def apply_single_qubit_gate(qc, coef, qubit, pauli):
     if pauli == 'X':
@@ -208,18 +208,18 @@ def optimized_two_qubit_circuit(qc, theta, qubit1, qubit2): #has no cnot min err
     qc.u(pi/2, pi/2, -pi/2, qubit1)
 
 
-def evolve_and_measure_circuit(t, τ, backend_name,backend,optimization_level, N,x,Δp,L, shape_name, omega, B,B_pert,  N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order,periodic, measure='Z'):
+# def evolve_and_measure_circuit(t, τ, backend_name,backend,optimization_level, N,x,Δp,L, shape_name, omega, B,B_pert,  N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order,periodic, measure='Z'):
+def build_evolution_circuit(
+    t, τ, backend_name, backend, optimization_level,
+    N, x, Δp, L, shape_name, omega, B, B_pert,
+    N_sites, Δx, p, theta_nu, trotter_steps, trotter_order, periodic):
     pauli_terms = construct_hamiltonian(N, x,Δp,L, shape_name,omega, B, N_sites, Δx,  p,theta_nu,periodic)
     # print("Pauli Terms:", pauli_terms)
     
     # k = int(round(t / τ))   # number of macro-steps
     # dt = τ / trotter_steps    # micro-step size is fixed forever
 
-    dt = t / trotter_steps
-
-    
-    # trotter_steps = max(1, int(np.round(t / τ)))   # or ceil
-    # dt = t / trotter_steps
+    dt = τ 
     
     if trotter_order == 'first':
         dt_substep = dt
@@ -227,16 +227,17 @@ def evolve_and_measure_circuit(t, τ, backend_name,backend,optimization_level, N
         dt_substep = dt/2
         pauli_terms = pauli_terms + pauli_terms[::-1]
         
-    
+    # print_julia_like_hamiltonian(pauli_terms, N_sites, dt_substep, theta_nu)
     qc = QuantumCircuit(N_sites, N_sites)
     half_N_sites = N_sites // 2
     if theta_nu == 1.74532925E-8 : 
         dt_substep = dt_substep/hbar # since the unitary is divided by hbar in richers test only 
         # for i in range(half_N_sites, N_sites):
         #     qc.x(i) # inital state for the richers test (first half chain up, other half chain down)
-        bitstr = '0'*half_N_sites + '1'*(N_sites - half_N_sites) # actual initial condition of sherwood
+        bitstr = '1'*half_N_sites + '0'*(N_sites - half_N_sites) # actual initial condition of sherwood
         prep = StatePreparation(bitstr[::-1])  # reverse due to qubit order in Qiskit
         qc.append(prep, qargs=range(N_sites))
+
 
     else:
         dt_substep = dt_substep 
@@ -253,76 +254,90 @@ def evolve_and_measure_circuit(t, τ, backend_name,backend,optimization_level, N
             qc.x(range(half_N_sites)) # initial state for rog and vac osc tests
 
     
+
+    qc.barrier(label="after_init")
+    alpha= 1e-4
     if B_pert is not None:
 
-        # Apply the perturbation only at the first step
-        pert_circuit(qc, dt_substep, omega, B_pert, N_sites, measure=measure)
-        # print("After pert qc", qc)
+        pert_circuit(qc, B_pert, N_sites, alpha)
+        qc.barrier(label="after_pert")
+
+    if t > 0:
+        # for step in range(trotter_steps):
+        #     print(f"\n=== Trotter step {step} ===")
+            for term_id, (coef, pauli) in enumerate(pauli_terms):
+                active_ops = pauli_label_to_qiskit_ops(pauli, N_sites)
+                label = pauli.to_label()
+                angle = coef * dt_substep
+
+                # print(
+                #     f"H term {term_id}: label={label}, "
+                #     f"active_ops={active_ops}, coef={coef}, angle={angle}"
+                # )
+
+                if len(active_ops) == 1:
+                    qubit, op = active_ops[0]
+                    apply_single_qubit_gate(qc, angle, qubit, op)
+
+                elif len(active_ops) == 2:
+                    (q0, op0), (q1, op1) = active_ops
+                    apply_two_qubit_gate(qc, angle, q0, q1, op0, op1)
+    print_julia_like_hamiltonian(pauli_terms, N_sites, dt_substep, theta_nu)
         
-    # for _ in range(k):  # macro steps
-        for _ in range(trotter_steps):  # micro steps inside τ
-            for coef, pauli in pauli_terms:
-                #converts the Pauli operator object into its string representation
-                pauli_str = pauli.to_label()
-                
-                #Creates a list of qubits that are affected by the Pauli term.
-                #uses a list comprehension that iterates over the string representation pauli_str of the Pauli operator.
-                # enumerate(pauli_str) provides both the index i and the character p for each position in the string.
-                #the condition if p != 'I' ensures that only qubits with a Pauli operator other than the identity I are included in the list qubits.
-                qubits = [i for i, p in enumerate(pauli_str) if p != 'I']
-                
-                if len(qubits) == 1:
-                    #coef * dt_substep: The rotation angle, which is the coefficient coef multiplied by the time step dt_substep
-                    apply_single_qubit_gate(qc, coef * dt_substep, qubits[0], pauli_str[qubits[0]])
-                elif len(qubits) == 2:
-                        apply_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
-                        # print(f"Applying term: {coef} * {pauli.to_label()} on qubits {qubits}")
-                        # apply_custom_two_qubit_gate(qc, coef * dt_substep, qubits[0], qubits[1], pauli_str[qubits[0]], pauli_str[qubits[1]])
-                        # cartan_two_qubit_gate(qc, (coef * dt_substep)/N_sites, qubits[0], qubits[1])
-                        # optimized_two_qubit_circuit(qc,- coef * dt_substep/N_sites, qubits[0], qubits[1])
-                        # Insert SWAP gate after the two-qubit gate
-                        # qc.swap(qubits[0], qubits[1])
-
-
-                # n = N_sites
-                # pauli_str = pauli.to_label()
-
-                # # indices in the *string* where non-identity acts
-                # str_idxs = [k for k, ch in enumerate(pauli_str) if ch != 'I']
-
-                # # convert string index -> circuit qubit index
-                # qubits = [n - 1 - k for k in str_idxs]
-
-                # if len(qubits) == 1:
-                #     q = qubits[0]
-                #     ch = pauli_str[n - 1 - q]     # same as pauli_str[str_idxs[0]]
-                #     apply_single_qubit_gate(qc, coef * dt_substep, q, ch)
-
-                # elif len(qubits) == 2:
-                #     q1, q2 = qubits
-                #     ch1 = pauli_str[n - 1 - q1]
-                #     ch2 = pauli_str[n - 1 - q2]
-                #     apply_two_qubit_gate(qc, coef * dt_substep, q1, q2, ch1, ch2)
-        
-        # transform basis from Z (up/down or |0>/|1>) to X (equal super position of |up>/ |down> to get the x basis =|+>/|->) using hadamard on the first qubit(b/c we are measurng the first qubit only)
-        # the measurement of counts in x basis is done later in main script to compute <sigma_x>
-        if measure == 'X':
-            qc.h(range(N_sites))  # Apply Hadamard to all qubits for X basis measurement
-            
-        # prepare the quantum state by transforming basis from Z to Y using sdg on the first qubit(b/c we are measurng the first qubit only)
-        # Similarly, the 'Sdg' gate (S-dagger) is applied, which corresponds to the inverse of the phase gate 'S'. This introduces a phase shift of - pi/2.
-        # Then, a Hadamard gate 'H' is applied. This sequence of gates transforms from Z basis to Y basis. 
-        
-        # the measurement of counts in Y basis is done later in main script to compute <sigma_y>
-        elif measure == 'Y':
-            qc.sdg(range(N_sites))  # Apply Sdg to all qubits for Y basis measurement
-            qc.h(range(N_sites))  # Then apply Hadamard       
-        
-        if backend_name == 'aer':
-            # Add the save_density_matrix instruction
-            qc.save_density_matrix()
-        qc.measure_all()  # Measure all qubits.
-        return qc
+    if backend_name == 'aer':
+        # Add the save_density_matrix instruction
+        qc.save_statevector()
+        qc.save_density_matrix()
+            # evolution loops...
+    qc.barrier(label="after_evolve")
+    
+    return qc
 
 
 
+def add_measurement_to_circuit(qc_base, N_sites, measure='Z'):
+    qc = qc_base.copy()
+
+    if measure == 'X':
+        qc.h(range(N_sites))
+    elif measure == 'Y':
+        qc.sdg(range(N_sites))
+        qc.h(range(N_sites))
+    elif measure != 'Z':
+        raise ValueError(f"Unsupported measurement basis: {measure}")
+
+    qc.measure_all()
+    qc.barrier(label="after_measure")
+    return qc
+
+def print_julia_like_hamiltonian(pauli_terms, N_sites, dt_substep, theta_nu):
+    print("\n=== Julia-like grouped Hamiltonian ===")
+
+    pair_groups = {}
+
+    for coef, pauli in pauli_terms:
+        active_ops = pauli_label_to_qiskit_ops(pauli, N_sites)
+
+        if len(active_ops) == 2:
+            (q0, op0), (q1, op1) = active_ops
+
+            # Qiskit qubit -> physical site (1-indexed)
+            s0 = N_sites - q0
+            s1 = N_sites - q1
+            pair = tuple(sorted((s0, s1)))
+
+            if pair not in pair_groups:
+                pair_groups[pair] = {"coef": coef, "ops": []}
+
+            pair_groups[pair]["ops"].append(op0 + op1)
+
+    angle_factor = dt_substep
+
+    for pair in sorted(pair_groups):
+        coef = pair_groups[pair]["coef"]
+        julia_like_coef = 4 * coef
+        print(
+            f"H 2-site term: pair={pair}, "
+            f"ops=(SzSz,SpSm,SmSp), coef={julia_like_coef}, "
+            f"angle_factor={angle_factor}"
+        )
