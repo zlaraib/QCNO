@@ -5,51 +5,40 @@ from qiskit.quantum_info import Pauli, Operator
 from constants import hbar, c , eV, MeV, GeV, G_F, kB
 
 
-
-def construct_pert_hamiltonian(omega, B_pert, N_sites):
-    pauli_terms = []
-
-    for i in range(N_sites):
-        # Construct single-qubit Pauli terms for each site
-        Xi = Pauli(f'{"I"*i}X{"I"*(N_sites-i-1)}')
-        Yi = Pauli(f'{"I"*i}Y{"I"*(N_sites-i-1)}')
-        Zi = Pauli(f'{"I"*i}Z{"I"*(N_sites-i-1)}')
-
-        pauli_terms.append((B_pert[0], Xi))
-        pauli_terms.append((B_pert[1], Yi))
-        pauli_terms.append((B_pert[2], Zi))
-
-    return pauli_terms
-
-
-def apply_single_qubit_gate(qc, coef, qubit):
+def pauli_label_to_qiskit_ops(pauli, n_qubits):
     """
-    Applies only an Ry rotation to the specified qubit.
-    coef determines the rotation angle.
+    Convert a Qiskit Pauli label into [(qubit, op), ...]
+    respecting Qiskit's bit ordering:
+    rightmost character = qubit 0
     """
-    qc.rx(2 * coef * 1e-6, qubit)  # all qubits perturbed with Rx
-    qc.ry(2 * coef * 1e-6, qubit)  # all qubits perturbed with Ry
-    qc.rz(2 * coef * 1e-6, qubit)  # all qubits perturbed with Ry
+    label = pauli.to_label() if hasattr(pauli, "to_label") else str(pauli)
+    ops = []
+    for label_pos, op in enumerate(label):
+        if op != "I":
+            qubit = n_qubits - 1 - label_pos
+            ops.append((qubit, op))
+    return ops           
 
+def apply_single_qubit_pert_gate(qc, coef, qubit, pauli):
+    if pauli == 'X':
+        qc.rx(coef, qubit)
+    elif pauli == 'Y':
+        qc.ry(coef, qubit)
+    elif pauli == 'Z':
+        qc.rz( coef, qubit)
+        
 
-def pert_circuit(qc, dt_substep, omega, B_pert, N_sites, measure='Z'):
-    pauli_terms = construct_pert_hamiltonian(omega, B_pert, N_sites)
+def pert_circuit(qc, B_pert, N_sites, alpha):
+    print("---- PERTURB DEBUG ----")
+    print(f"B_pert = {B_pert}")
+    print(f"alpha = {alpha}")
 
-    # Apply Ry rotation to every qubit for each perturbation term
-    for coef, _ in pauli_terms:
-        for q in range(N_sites):
-            # apply_single_qubit_gate(qc, coef * dt_substep, q)
-            apply_single_qubit_gate(qc, coef, q)
+    for site in range(N_sites):
+        print(f"PERT site={site+1}: coef={B_pert[0]}, op=Sx, local_angle={alpha * B_pert[0]}")
+        print(f"PERT site={site+1}: coef={B_pert[1]}, op=Sy, local_angle={alpha * B_pert[1]}")
+        print(f"PERT site={site+1}: coef={B_pert[2]}, op=Sz, local_angle={alpha * B_pert[2]}")
+        print(f"PERT combined: site={site+1}, angle_factor={alpha}")
 
-
-
-    # for q in range(N_sites):
-    #     apply_single_qubit_gate(qc, alpha, B_pert, q)
-    # Basis transformation for measurement
-    if measure == 'X':
-        qc.h(range(N_sites))
-    elif measure == 'Y':
-        qc.sdg(range(N_sites))
-        qc.h(range(N_sites))
-
-    return qc
+        qc.rx(alpha * B_pert[0], site)
+        qc.ry(alpha * B_pert[1], site)
+        qc.rz(alpha * B_pert[2], site)
