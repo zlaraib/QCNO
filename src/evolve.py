@@ -219,7 +219,7 @@ def build_evolution_circuit(
     # k = int(round(t / τ))   # number of macro-steps
     # dt = τ / trotter_steps    # micro-step size is fixed forever
 
-    dt = τ 
+    dt = t/trotter_steps 
     
     if trotter_order == 'first':
         dt_substep = dt
@@ -263,8 +263,8 @@ def build_evolution_circuit(
         qc.barrier(label="after_pert")
 
     if t > 0:
-        # for step in range(trotter_steps):
-        #     print(f"\n=== Trotter step {step} ===")
+        for step in range(trotter_steps):
+            print(f"\n=== Trotter step {step} ===")
             for term_id, (coef, pauli) in enumerate(pauli_terms):
                 active_ops = pauli_label_to_qiskit_ops(pauli, N_sites)
                 label = pauli.to_label()
@@ -341,3 +341,7 @@ def print_julia_like_hamiltonian(pauli_terms, N_sites, dt_substep, theta_nu):
             f"ops=(SzSz,SpSm,SmSp), coef={julia_like_coef}, "
             f"angle_factor={angle_factor}"
         )
+
+# def pauli_label_to_qiskit_ops(pauli, N_sites):
+#     pauli_str = pauli.to_label()
+#     return [(i, p) for i, p in enumerate(pauli_str) if p != 'I']
