@@ -1,5 +1,7 @@
 # evolve.py 
 
+# from math import perm
+
 import numpy as np
 from scipy.linalg import expm
 from qiskit.circuit import QuantumCircuit 
@@ -207,44 +209,62 @@ def optimized_two_qubit_circuit(qc, theta, qubit1, qubit2): #has no cnot min err
     # Apply the final Uq gate to first qubit
     qc.u(pi/2, pi/2, -pi/2, qubit1)
 
-
-# def evolve_and_measure_circuit(t, τ, backend_name,backend,optimization_level, N,x,Δp,L, shape_name, omega, B,B_pert,  N_sites, Δx,  p,theta_nu, trotter_steps, trotter_order,periodic, measure='Z'):
+    
 def build_evolution_circuit(
     t, τ, backend_name, backend, optimization_level,
     N, x, Δp, L, shape_name, omega, B, B_pert,
-    N_sites, Δx, p, theta_nu, trotter_steps, trotter_order, periodic):
-    pauli_terms = construct_hamiltonian(N, x,Δp,L, shape_name,omega, B, N_sites, Δx,  p,theta_nu,periodic)
-    # print("Pauli Terms:", pauli_terms)
-    
-    # k = int(round(t / τ))   # number of macro-steps
-    # dt = τ / trotter_steps    # micro-step size is fixed forever
+    N_sites, Δx, p, theta_nu, trotter_steps, trotter_order, periodic, energy_sign):
 
-    dt = t/trotter_steps 
+    qc = QuantumCircuit(N_sites, N_sites)
+    half_N_sites = N_sites // 2
+    
+    perm = np.argsort(x)
+
+    x_sorted = np.asarray(x)[perm]
+    N_sorted = np.asarray(N)[perm]
+    omega_sorted = np.asarray(omega)[perm]
+    p_sorted = np.asarray(p)[perm]
+    energy_sign_sorted = np.asarray(energy_sign)[perm]
+
+    pauli_terms = construct_hamiltonian(
+        N_sorted, x_sorted, Δp, L, shape_name, omega_sorted, B,
+        N_sites, Δx, p_sorted, theta_nu, periodic
+    )
+    # # k = int(round(t / τ))   # number of macro-steps
+    # # dt = τ / trotter_steps    # micro-step size is fixed forever
+
+    dt_substep = t/trotter_steps 
+    # n_time_steps = int(round(t / τ))
+    # total_substeps = n_time_steps * trotter_steps
+    # dt_substep = τ / trotter_steps
     
     if trotter_order == 'first':
-        dt_substep = dt
+        dt_substep = dt_substep/hbar
     if trotter_order == 'second':
-        dt_substep = dt/2
+        dt_substep = dt_substep/(2*hbar)
         pauli_terms = pauli_terms + pauli_terms[::-1]
         
     # print_julia_like_hamiltonian(pauli_terms, N_sites, dt_substep, theta_nu)
-    qc = QuantumCircuit(N_sites, N_sites)
-    half_N_sites = N_sites // 2
+
     if theta_nu == 1.74532925E-8 : 
-        dt_substep = dt_substep/hbar # since the unitary is divided by hbar in richers test only 
-        # for i in range(half_N_sites, N_sites):
-        #     qc.x(i) # inital state for the richers test (first half chain up, other half chain down)
-        bitstr = '1'*half_N_sites + '0'*(N_sites - half_N_sites) # actual initial condition of sherwood
-        prep = StatePreparation(bitstr[::-1])  # reverse due to qubit order in Qiskit
+        # dt_substep = dt_substep/hbar # since the unitary is divided by hbar in richers test only 
+        bit_list = ['1' if s == -1 else '0' for s in energy_sign_sorted]
+        bitstr = ''.join(bit_list)
+
+        print("sorted perm =", perm)
+        print("sorted energy_sign =", energy_sign_sorted)
+        print("sorted init bitstr =", bitstr)
+
+        prep = StatePreparation(bitstr[::-1])   # reverse only for Qiskit endianness
         qc.append(prep, qargs=range(N_sites))
 
 
     else:
-        dt_substep = dt_substep 
+        # dt_substep = dt_substep 
         if theta_nu == 1000 : # for Josh test
             # inital state for the Josh test (first half chain + 1 up, other half -1 chain down)
             # String labels: Labels like '01' can initialize the qubits, where '01' means qubit 0 is |1⟩ (down) and qubit 1 is |0⟩ (up).
-            bitstr = '0'*(half_N_sites+ 1) + '1'*(N_sites - half_N_sites - 1)
+            bitstr = '1'*(half_N_sites+ 1) + '0'*(N_sites - half_N_sites - 1)
             print("bitstr = ",bitstr )
             prep = StatePreparation(bitstr[::-1])  
             # prep = StatePreparation(bitstr)  
@@ -254,34 +274,34 @@ def build_evolution_circuit(
             qc.x(range(half_N_sites)) # initial state for rog and vac osc tests
 
     
-
     qc.barrier(label="after_init")
-    alpha= 1e-4
+    
+    alpha= 1e-2
     if B_pert is not None:
 
         pert_circuit(qc, B_pert, N_sites, alpha)
         qc.barrier(label="after_pert")
 
-    if t > 0:
-        for step in range(trotter_steps):
-            print(f"\n=== Trotter step {step} ===")
-            for term_id, (coef, pauli) in enumerate(pauli_terms):
-                active_ops = pauli_label_to_qiskit_ops(pauli, N_sites)
-                label = pauli.to_label()
-                angle = coef * dt_substep
+    # if t > 0:
+    for step in range(trotter_steps):
+        print(f"\n=== Trotter step {step} ===")
+        for term_id, (coef, pauli) in enumerate(pauli_terms):
+            active_ops = pauli_label_to_qiskit_ops(pauli, N_sites)
+            label = pauli.to_label()
+            angle = coef * dt_substep
 
-                # print(
-                #     f"H term {term_id}: label={label}, "
-                #     f"active_ops={active_ops}, coef={coef}, angle={angle}"
-                # )
+            print(
+                f"H term {term_id}: label={label}, "
+                f"active_ops={active_ops}, coef={coef}, angle={angle}"
+            )
 
-                if len(active_ops) == 1:
-                    qubit, op = active_ops[0]
-                    apply_single_qubit_gate(qc, angle, qubit, op)
+            if len(active_ops) == 1:
+                qubit, op = active_ops[0]
+                apply_single_qubit_gate(qc, angle, qubit, op)
 
-                elif len(active_ops) == 2:
-                    (q0, op0), (q1, op1) = active_ops
-                    apply_two_qubit_gate(qc, angle, q0, q1, op0, op1)
+            elif len(active_ops) == 2:
+                (q0, op0), (q1, op1) = active_ops
+                apply_two_qubit_gate(qc, angle, q0, q1, op0, op1)
     print_julia_like_hamiltonian(pauli_terms, N_sites, dt_substep, theta_nu)
         
     if backend_name == 'aer':
@@ -291,7 +311,7 @@ def build_evolution_circuit(
             # evolution loops...
     qc.barrier(label="after_evolve")
     
-    return qc
+    return qc, perm
 
 
 
@@ -306,7 +326,7 @@ def add_measurement_to_circuit(qc_base, N_sites, measure='Z'):
     elif measure != 'Z':
         raise ValueError(f"Unsupported measurement basis: {measure}")
 
-    qc.measure_all()
+    # qc.measure_all()
     qc.barrier(label="after_measure")
     return qc
 
@@ -342,6 +362,16 @@ def print_julia_like_hamiltonian(pauli_terms, N_sites, dt_substep, theta_nu):
             f"angle_factor={angle_factor}"
         )
 
-# def pauli_label_to_qiskit_ops(pauli, N_sites):
-#     pauli_str = pauli.to_label()
-#     return [(i, p) for i, p in enumerate(pauli_str) if p != 'I']
+def pauli_label_to_qiskit_ops(pauli, N_sites):
+    """
+    Qiskit Pauli labels are big-endian:
+    leftmost char -> qubit N_sites-1
+    rightmost char -> qubit 0
+    """
+    pauli_str = pauli.to_label()
+    ops = []
+    for label_pos, p in enumerate(pauli_str):
+        if p != 'I':
+            qubit = N_sites - 1 - label_pos
+            ops.append((qubit, p))
+    return ops

@@ -143,8 +143,9 @@ def meas_counts(qc_base, measure, N_sites, backend_name, backend, optimization_l
         result = job.result()
         pub_result = result[0]
         # counts = pub_result.data.c.get_counts() # used for when I was measuring on the first qubit only 
-        counts = result[0].data.meas.get_counts()
-        print("Shot counts after transpilation : ", counts)
+        # counts = result[0].data.meas.get_counts()
+        counts= 140
+        # print("Shot counts after transpilation : ", counts)
         result = backend.run(isa_circuit).result()
         if backend_name == 'aer':
             # Retrieve the density matrix
@@ -156,7 +157,7 @@ def meas_counts(qc_base, measure, N_sites, backend_name, backend, optimization_l
             
             print("Statevector retrieved successfully.")
             # Example: print the first 4 amplitudes
-            print("print the first 4 amplitudes=", statevector.data[:4]) 
+            # print("print the first 4 amplitudes=", statevector.data[:4]) 
 
     # # Print gate counts= Total number of gates.
     # gate_counts = isa_circuit.count_ops()
