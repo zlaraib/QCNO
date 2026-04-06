@@ -14,21 +14,21 @@ def construct_hamiltonian(N, x, Δp, L, shape_name, omega, B, N_sites, Δx, p, t
     p_mod, p_hat = momentum(p, N_sites)
 
     for i in range(N_sites - 1):
-        print(
-            "Python sorted site", i,
-            "x=", x[i],
-            "p=", p[i],
-            "N=", N[i],
-            "omega=", omega[i]
-        )
+        # print(
+        #     "Python sorted site", i,
+        #     "x=", x[i],
+        #     "p=", p[i],
+        #     "N=", N[i],
+        #     "omega=", omega[i]
+        # )
         for j in range(i + 1, N_sites):
             geometric_factor = geometric_func(p, p_hat, i, j, theta_nu)
             shape_function = shape_func(x, Δp, i, j, L, shape_name, periodic)
             interaction_strength = ((1/2) * np.sqrt(2) * G_F * (N[i] + N[j]) / (2 * ((Δx)**3))) * geometric_factor * shape_function
 
-            print("geometric_factor from site ", i, " and site ", j, "= ", geometric_factor)
-            print("shape_function from site ", i, " and site ", j, "= ", shape_function)
-            print("interaction_strength from site ", i, " and site ", j, "= ", interaction_strength)
+            # print("geometric_factor from site ", i, " and site ", j, "= ", geometric_factor)
+            # print("shape_function from site ", i, " and site ", j, "= ", shape_function)
+            # print("interaction_strength from site ", i, " and site ", j, "= ", interaction_strength)
 
             if interaction_strength != 0:
                 XX = Pauli(f'{"I"*i}X{"I"*(j-i-1)}X{"I"*(N_sites-j-1)}')

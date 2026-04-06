@@ -17,7 +17,7 @@ from momentum import momentum
 from constants import hbar, c , eV, MeV, GeV, G_F, kB
 from geometric_func import geometric_func
 from hamiltonian import construct_hamiltonian
-from perturb import pert_circuit, pauli_label_to_qiskit_ops
+from perturb import pert_circuit
 
 def apply_single_qubit_gate(qc, coef, qubit, pauli):
     if pauli == 'X':
@@ -209,149 +209,40 @@ def optimized_two_qubit_circuit(qc, theta, qubit1, qubit2): #has no cnot min err
     # Apply the final Uq gate to first qubit
     qc.u(pi/2, pi/2, -pi/2, qubit1)
 
-    
-def build_evolution_circuit(
-    t, τ, backend_name, backend, optimization_level,
-    N, x, Δp, L, shape_name, omega, B, B_pert,
-    N_sites, Δx, p, theta_nu, trotter_steps, trotter_order, periodic, energy_sign):
 
-    qc = QuantumCircuit(N_sites, N_sites)
-    half_N_sites = N_sites // 2
-    
-    perm = np.argsort(x)
-
-    x_sorted = np.asarray(x)[perm]
-    N_sorted = np.asarray(N)[perm]
-    omega_sorted = np.asarray(omega)[perm]
-    p_sorted = np.asarray(p)[perm]
-    energy_sign_sorted = np.asarray(energy_sign)[perm]
-
-    pauli_terms = construct_hamiltonian(
-        N_sorted, x_sorted, Δp, L, shape_name, omega_sorted, B,
-        N_sites, Δx, p_sorted, theta_nu, periodic
-    )
-    # # k = int(round(t / τ))   # number of macro-steps
-    # # dt = τ / trotter_steps    # micro-step size is fixed forever
-
-    dt_substep = t/trotter_steps 
-    # n_time_steps = int(round(t / τ))
-    # total_substeps = n_time_steps * trotter_steps
-    # dt_substep = τ / trotter_steps
-    
-    if trotter_order == 'first':
-        dt_substep = dt_substep/hbar
-    if trotter_order == 'second':
-        dt_substep = dt_substep/(2*hbar)
-        pauli_terms = pauli_terms + pauli_terms[::-1]
-        
-    # print_julia_like_hamiltonian(pauli_terms, N_sites, dt_substep, theta_nu)
-
-    if theta_nu == 1.74532925E-8 : 
-        # dt_substep = dt_substep/hbar # since the unitary is divided by hbar in richers test only 
-        bit_list = ['1' if s == -1 else '0' for s in energy_sign_sorted]
-        bitstr = ''.join(bit_list)
-
-        print("sorted perm =", perm)
-        print("sorted energy_sign =", energy_sign_sorted)
-        print("sorted init bitstr =", bitstr)
-
-        prep = StatePreparation(bitstr[::-1])   # reverse only for Qiskit endianness
-        qc.append(prep, qargs=range(N_sites))
-
-
-    else:
-        # dt_substep = dt_substep 
-        if theta_nu == 1000 : # for Josh test
-            # inital state for the Josh test (first half chain + 1 up, other half -1 chain down)
-            # String labels: Labels like '01' can initialize the qubits, where '01' means qubit 0 is |1⟩ (down) and qubit 1 is |0⟩ (up).
-            bitstr = '1'*(half_N_sites+ 1) + '0'*(N_sites - half_N_sites - 1)
-            print("bitstr = ",bitstr )
-            prep = StatePreparation(bitstr[::-1])  
-            # prep = StatePreparation(bitstr)  
-            print("prep=", prep)
-            qc.append(prep, qargs=range(N_sites)) # Append the StatePreparation gate to the circuit on all N_sites qubits
-        else:
-            qc.x(range(half_N_sites)) # initial state for rog and vac osc tests
-
-    
-    qc.barrier(label="after_init")
-    
-    alpha= 1e-2
-    if B_pert is not None:
-
-        pert_circuit(qc, B_pert, N_sites, alpha)
-        qc.barrier(label="after_pert")
-
-    # if t > 0:
-    for step in range(trotter_steps):
-        print(f"\n=== Trotter step {step} ===")
-        for term_id, (coef, pauli) in enumerate(pauli_terms):
-            active_ops = pauli_label_to_qiskit_ops(pauli, N_sites)
-            label = pauli.to_label()
-            angle = coef * dt_substep
-
-            print(
-                f"H term {term_id}: label={label}, "
-                f"active_ops={active_ops}, coef={coef}, angle={angle}"
-            )
-
-            if len(active_ops) == 1:
-                qubit, op = active_ops[0]
-                apply_single_qubit_gate(qc, angle, qubit, op)
-
-            elif len(active_ops) == 2:
-                (q0, op0), (q1, op1) = active_ops
-                apply_two_qubit_gate(qc, angle, q0, q1, op0, op1)
-    print_julia_like_hamiltonian(pauli_terms, N_sites, dt_substep, theta_nu)
-        
-    if backend_name == 'aer':
-        # Add the save_density_matrix instruction
-        qc.save_statevector()
-        qc.save_density_matrix()
-            # evolution loops...
-    qc.barrier(label="after_evolve")
-    
-    return qc, perm
-
-
-
-def add_measurement_to_circuit(qc_base, N_sites, measure='Z'):
+def add_measurement_to_circuit(qc_base, n_qubits, measure='Z'):
     qc = qc_base.copy()
 
     if measure == 'X':
-        qc.h(range(N_sites))
+        qc.h(range(n_qubits))
     elif measure == 'Y':
-        qc.sdg(range(N_sites))
-        qc.h(range(N_sites))
+        qc.sdg(range(n_qubits))
+        qc.h(range(n_qubits))
     elif measure != 'Z':
         raise ValueError(f"Unsupported measurement basis: {measure}")
 
-    # qc.measure_all()
+    qc.measure_all()
     qc.barrier(label="after_measure")
     return qc
 
-def print_julia_like_hamiltonian(pauli_terms, N_sites, dt_substep, theta_nu):
+def print_julia_like_hamiltonian(pauli_terms, n_qubits, angle_factor):
     print("\n=== Julia-like grouped Hamiltonian ===")
 
     pair_groups = {}
 
     for coef, pauli in pauli_terms:
-        active_ops = pauli_label_to_qiskit_ops(pauli, N_sites)
+        active_ops = pauli_label_to_qiskit_ops(pauli, n_qubits)
 
         if len(active_ops) == 2:
             (q0, op0), (q1, op1) = active_ops
-
-            # Qiskit qubit -> physical site (1-indexed)
-            s0 = N_sites - q0
-            s1 = N_sites - q1
+            s0 = n_qubits - q0
+            s1 = n_qubits - q1
             pair = tuple(sorted((s0, s1)))
 
             if pair not in pair_groups:
                 pair_groups[pair] = {"coef": coef, "ops": []}
 
             pair_groups[pair]["ops"].append(op0 + op1)
-
-    angle_factor = dt_substep
 
     for pair in sorted(pair_groups):
         coef = pair_groups[pair]["coef"]
@@ -361,17 +252,118 @@ def print_julia_like_hamiltonian(pauli_terms, N_sites, dt_substep, theta_nu):
             f"ops=(SzSz,SpSm,SmSp), coef={julia_like_coef}, "
             f"angle_factor={angle_factor}"
         )
-
-def pauli_label_to_qiskit_ops(pauli, N_sites):
+def pauli_label_to_qiskit_ops(pauli, n_qubits):
     """
     Qiskit Pauli labels are big-endian:
-    leftmost char -> qubit N_sites-1
+    leftmost char -> qubit n_qubits-1
     rightmost char -> qubit 0
     """
-    pauli_str = pauli.to_label()
+    label = pauli.to_label() if hasattr(pauli, "to_label") else str(pauli)
     ops = []
-    for label_pos, p in enumerate(pauli_str):
-        if p != 'I':
-            qubit = N_sites - 1 - label_pos
-            ops.append((qubit, p))
+    for label_pos, op in enumerate(label):
+        if op != "I":
+            qubit = n_qubits - 1 - label_pos
+            ops.append((qubit, op))
     return ops
+
+def initialize_base_circuit(
+    n_qubits, theta_nu, energy_sign_sorted, B_pert=None, alpha=None
+):
+    qc = QuantumCircuit(n_qubits, n_qubits)
+    half_n = n_qubits // 2
+
+    if theta_nu == 1.74532925E-8:
+        # Up = |0>, Down = |1>
+        bit_list = ['0' if s == -1 else '1' for s in energy_sign_sorted]
+        bitstr = ''.join(bit_list)
+
+        print("init energy_sign_sorted =", energy_sign_sorted)
+        print("init bitstr =", bitstr)
+
+        prep = StatePreparation(bitstr[::-1])  # Qiskit endianness
+        qc.append(prep, qargs=range(n_qubits))
+
+    else:
+        if theta_nu == 1000:
+            bitstr = '1' * (half_n + 1) + '0' * (n_qubits - half_n - 1)
+            prep = StatePreparation(bitstr[::-1])
+            qc.append(prep, qargs=range(n_qubits))
+        else:
+            qc.x(range(half_n))
+
+    qc.barrier(label="after_init")
+
+    if B_pert is not None:
+        pert_circuit(qc, B_pert, n_qubits, alpha)
+        qc.barrier(label="after_pert")
+
+    return qc
+
+def apply_qubit_permutation(qc, current_particle_ids, target_particle_ids):
+    """
+    Reorder the live quantum state so qubit positions match target_particle_ids.
+    Both inputs are arrays of particle IDs indexed by qubit position.
+    """
+    current_particle_ids = list(current_particle_ids)
+    target_particle_ids = list(target_particle_ids)
+
+    for target_pos in range(len(target_particle_ids)):
+        wanted_particle = target_particle_ids[target_pos]
+        current_pos = current_particle_ids.index(wanted_particle)
+
+        if current_pos != target_pos:
+            qc.swap(target_pos, current_pos)
+            current_particle_ids[target_pos], current_particle_ids[current_pos] = (
+                current_particle_ids[current_pos],
+                current_particle_ids[target_pos],
+            )
+
+    return qc, np.array(current_particle_ids)
+
+def apply_one_timestep(
+    qc,
+    τ,
+    N, x, Δp, L, shape_name, omega, B,
+    n_qubits, Δx, p, theta_nu, trotter_steps, trotter_order, periodic
+):
+    # Metadata are assumed already sorted and aligned with qubit order
+    pauli_terms = construct_hamiltonian(
+        N, x, Δp, L, shape_name, omega, B,
+        n_qubits, Δx, p, theta_nu, periodic
+    )
+
+    dt = τ / trotter_steps
+
+    if trotter_order == 'first':
+        dt_substep = dt / hbar
+        angle_factor_for_print = τ / hbar
+    elif trotter_order == 'second':
+        dt_substep = dt / (2 * hbar)
+        angle_factor_for_print = τ / (2 * hbar)
+        pauli_terms = pauli_terms + pauli_terms[::-1]
+    else:
+        raise ValueError("trotter_order must be 'first' or 'second'")
+
+    for step in range(trotter_steps):
+        print(f"\n=== Trotter step {step} ===")
+
+        for term_id, (coef, pauli) in enumerate(pauli_terms):
+            active_ops = pauli_label_to_qiskit_ops(pauli, n_qubits)
+            label = pauli.to_label()
+            angle = coef * dt_substep
+
+            # print(
+            #     f"H term {term_id}: label={label}, "
+            #     f"active_ops={active_ops}, coef={coef}, angle={angle}"
+            # )
+
+            if len(active_ops) == 1:
+                qubit, op = active_ops[0]
+                apply_single_qubit_gate(qc, angle, qubit, op)
+
+            elif len(active_ops) == 2:
+                (q0, op0), (q1, op1) = active_ops
+                apply_two_qubit_gate(qc, angle, q0, q1, op0, op1)
+
+    # print_julia_like_hamiltonian(pauli_terms, n_qubits, angle_factor_for_print)
+    return qc

@@ -5,29 +5,6 @@ from qiskit.quantum_info import Pauli, Operator
 from constants import hbar, c , eV, MeV, GeV, G_F, kB
 
 
-def pauli_label_to_qiskit_ops(pauli, n_qubits):
-    """
-    Convert a Qiskit Pauli label into [(qubit, op), ...]
-    respecting Qiskit's bit ordering:
-    rightmost character = qubit 0
-    """
-    label = pauli.to_label() if hasattr(pauli, "to_label") else str(pauli)
-    ops = []
-    for label_pos, op in enumerate(label):
-        if op != "I":
-            qubit = n_qubits - 1 - label_pos
-            ops.append((qubit, op))
-    return ops           
-
-def apply_single_qubit_pert_gate(qc, coef, qubit, pauli):
-    if pauli == 'X':
-        qc.rx(coef, qubit)
-    elif pauli == 'Y':
-        qc.ry(coef, qubit)
-    elif pauli == 'Z':
-        qc.rz( coef, qubit)
-        
-
 def pert_circuit(qc, B_pert, N_sites, alpha):
     print("---- PERTURB DEBUG ----")
     print(f"B_pert = {B_pert}")
