@@ -266,38 +266,6 @@ def pauli_label_to_qiskit_ops(pauli, n_qubits):
             ops.append((qubit, op))
     return ops
 
-def initialize_base_circuit(
-    n_qubits, theta_nu, energy_sign_sorted, B_pert=None, alpha=None
-):
-    qc = QuantumCircuit(n_qubits, n_qubits)
-    half_n = n_qubits // 2
-
-    if theta_nu == 1.74532925E-8:
-        # Up = |0>, Down = |1>
-        bit_list = ['0' if s == -1 else '1' for s in energy_sign_sorted]
-        bitstr = ''.join(bit_list)
-
-        print("init energy_sign_sorted =", energy_sign_sorted)
-        print("init bitstr =", bitstr)
-
-        prep = StatePreparation(bitstr[::-1])  # Qiskit endianness
-        qc.append(prep, qargs=range(n_qubits))
-
-    else:
-        if theta_nu == 1000:
-            bitstr = '1' * (half_n + 1) + '0' * (n_qubits - half_n - 1)
-            prep = StatePreparation(bitstr[::-1])
-            qc.append(prep, qargs=range(n_qubits))
-        else:
-            qc.x(range(half_n))
-
-    qc.barrier(label="after_init")
-
-    if B_pert is not None:
-        pert_circuit(qc, B_pert, n_qubits, alpha)
-        qc.barrier(label="after_pert")
-
-    return qc
 
 def apply_qubit_permutation(qc, current_particle_ids, target_particle_ids):
     """
@@ -324,12 +292,12 @@ def apply_one_timestep(
     qc,
     τ,
     N, x, Δp, L, shape_name, omega, B,
-    n_qubits, Δx, p, theta_nu, trotter_steps, trotter_order, periodic
+    n_qubits, Δx, p, geometric_name, trotter_steps, trotter_order, periodic
 ):
     # Metadata are assumed already sorted and aligned with qubit order
     pauli_terms = construct_hamiltonian(
         N, x, Δp, L, shape_name, omega, B,
-        n_qubits, Δx, p, theta_nu, periodic
+        n_qubits, Δx, p, geometric_name, periodic
     )
 
     dt = τ / trotter_steps
@@ -345,7 +313,7 @@ def apply_one_timestep(
         raise ValueError("trotter_order must be 'first' or 'second'")
 
     for step in range(trotter_steps):
-        print(f"\n=== Trotter step {step} ===")
+        # print(f"\n=== Trotter step {step} ===")
 
         for term_id, (coef, pauli) in enumerate(pauli_terms):
             active_ops = pauli_label_to_qiskit_ops(pauli, n_qubits)
