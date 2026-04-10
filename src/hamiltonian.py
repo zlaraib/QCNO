@@ -8,7 +8,7 @@ from geometric_func import geometric_func
 from qiskit.circuit import QuantumCircuit
 from shape_func import shape_func
 
-def construct_hamiltonian(N, x, Δp, L, shape_name, omega, B, N_sites, Δx, p, theta_nu, periodic):
+def construct_hamiltonian(N, x, Δp, L, shape_name, omega, B, N_sites, Δx, p, geometric_name, periodic):
     pauli_terms = []
 
     p_mod, p_hat = momentum(p, N_sites)
@@ -22,7 +22,7 @@ def construct_hamiltonian(N, x, Δp, L, shape_name, omega, B, N_sites, Δx, p, t
         #     "omega=", omega[i]
         # )
         for j in range(i + 1, N_sites):
-            geometric_factor = geometric_func(p, p_hat, i, j, theta_nu)
+            geometric_factor = geometric_func(geometric_name, p_hat, i, j)
             shape_function = shape_func(x, Δp, i, j, L, shape_name, periodic)
             interaction_strength = ((1/2) * np.sqrt(2) * G_F * (N[i] + N[j]) / (2 * ((Δx)**3))) * geometric_factor * shape_function
 
