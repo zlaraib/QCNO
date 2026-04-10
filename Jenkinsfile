@@ -27,22 +27,30 @@ pipeline {
 				archiveArtifacts artifacts: '*.pdf'
             }
 } 
-	stage('Rogerro(2021)_only_self_interactions'){ steps{
-		sh 'jupyter nbconvert --to script tests/main_self_int_Rog.ipynb'
-		sh 'python tests/main_self_int_Rog.py'
-		archiveArtifacts artifacts: 'misc/plots/Rog_self_int/*/*/*/*.pdf'
-    } 
-}
+
 	stage('Rogerro(2021) full Hamiltonian'){ steps{
 		sh 'jupyter nbconvert --to script tests/main_Rog.ipynb'
 		sh 'python tests/main_Rog.py'
-		archiveArtifacts artifacts: 'misc/plots/Rog_collective_osc/*/*/*/*.pdf'
+		archiveArtifacts artifacts: '/plots/*.pdf'
+		rm -rf 'datafiles/*.dat'
+		rm -rf 'plots/*.pdf'
     } 
 }
 	stage('Richers(2021) MF Homogenous QC_FFI'){ steps{
 		sh 'jupyter nbconvert --to script tests/Homogenous_FFI_Richers.ipynb'
 		sh 'python tests/Homogenous_FFI_Richers.py'
-		archiveArtifacts artifacts: 'misc/plots/FFI/*/*/*/*.pdf'
+		archiveArtifacts artifacts: '/plots/*.pdf'
+		rm -rf 'datafiles/*.dat'
+		rm -rf 'plots/*.pdf'
+
+    } 
+}
+	stage('Richers(2021) MF Inomogenous QC_FFI'){ steps{
+		sh 'jupyter nbconvert --to script tests/Inhomogenous_FFI_Richers.ipynb'
+		sh 'python tests/Inhomogenous_FFI_Richers.py'
+		archiveArtifacts artifacts: '/plots/*.pdf'
+		rm -rf 'datafiles/*.dat'
+		rm -rf 'plots/*.pdf'
     } 
 }
 
