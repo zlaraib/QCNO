@@ -32,33 +32,28 @@ pipeline {
 		sh 'jupyter nbconvert --to script tests/main_Rog.ipynb'
 		sh 'python tests/main_Rog.py'
 		archiveArtifacts artifacts: '/plots/*.pdf'
-		rm -rf 'datafiles/*.dat'
-		rm -rf 'plots/*.pdf'
+		sh 'rm -rf datafiles plots'
     } 
 }
 	stage('Richers(2021) MF Homogenous QC_FFI'){ steps{
 		sh 'jupyter nbconvert --to script tests/Homogenous_FFI_Richers.ipynb'
 		sh 'python tests/Homogenous_FFI_Richers.py'
 		archiveArtifacts artifacts: '/plots/*.pdf'
-		rm -rf 'datafiles/*.dat'
-		rm -rf 'plots/*.pdf'
+		sh 'rm -rf datafiles plots'
 
     } 
 }
 	stage('Richers(2021) MF Inomogenous QC_FFI'){ steps{
 		sh 'jupyter nbconvert --to script tests/Inhomogenous_FFI_Richers.ipynb'
 		sh 'python tests/Inhomogenous_FFI_Richers.py'
-		archiveArtifacts artifacts: '/plots/*.pdf'
-		rm -rf 'datafiles/*.dat'
-		rm -rf 'plots/*.pdf'
+		sh 'rm -rf datafiles plots'
     } 
 }
 	stage('Josh Homogenous depolarization noise'){ steps{
 		sh 'jupyter nbconvert --to script tests/Homo_Josh_noise_depolarization.ipynb'
 		sh 'python tests/Homo_Josh_noise_depolarization.py'
 		archiveArtifacts artifacts: '/plots/*.pdf'
-		rm -rf 'datafiles/*.dat'
-		rm -rf 'plots/*.pdf'
+		sh 'rm -rf datafiles plots'
     } 
 }
 
