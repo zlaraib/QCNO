@@ -53,6 +53,14 @@ pipeline {
 		rm -rf 'plots/*.pdf'
     } 
 }
+	stage('Josh Homogenous depolarization noise'){ steps{
+		sh 'jupyter nbconvert --to script tests/Homo_Josh_noise_depolarization.ipynb'
+		sh 'python tests/Homo_Josh_noise_depolarization.py'
+		archiveArtifacts artifacts: '/plots/*.pdf'
+		rm -rf 'datafiles/*.dat'
+		rm -rf 'plots/*.pdf'
+    } 
+}
 
 }// stages{
 
