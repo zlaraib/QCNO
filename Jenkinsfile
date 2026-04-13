@@ -25,7 +25,7 @@ pipeline {
                 // Run the converted Python script
                 sh 'python tests/main_vac_osc.py'
 				sh 'find . -name "*.pdf"'
-				archiveArtifacts artifacts: '**/*.pdf', allowEmptyArchive: true
+				archiveArtifacts artifacts: '*.pdf', allowEmptyArchive: true
             }
 } 
 
