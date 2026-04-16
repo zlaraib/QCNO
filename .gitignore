@@ -1,0 +1,21 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+myenv/
+qiskit_env/
+venv/
+.venv/
+env/
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+# (optional: keep settings if you want)
+#!.vscode/settings.json
+
+# OS files
+.DS_Store
