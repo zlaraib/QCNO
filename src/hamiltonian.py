@@ -9,10 +9,33 @@ from qiskit.circuit import QuantumCircuit
 from shape_func import shape_func
 
 def construct_hamiltonian(N, x, Δp, L, shape_name, omega, B, N_sites, Δx, p, geometric_name, periodic):
+    
+    """
+    Build the Hamiltonian as a list of (coefficient, Pauli) terms.
+
+    Inputs:
+    - N: Array of occupancies / weights for each site.
+    - x: Array of site positions.
+    - Δp: Momentum spacing.
+    - L: Total system size.
+    - shape_name: Name of the spatial shape function to use.
+    - omega: Array of vacuum oscillation frequencies for each site.
+    - B: Three-component coefficient vector for single-site X/Y/Z terms.
+    - N_sites: Number of lattice sites / qubits.
+    - p: Array of momenta for each site.
+    - geometric_name: Name of the geometric factor function to use.
+    - periodic: Whether to use periodic boundary conditions in the shape function.
+
+    Output:
+    - pauli_terms: List of (coefficient, Pauli) pairs representing the Hamiltonian.
+    """
     pauli_terms = []
 
     p_mod, p_hat = momentum(p, N_sites)
 
+    assert np.isclose(Δx, L / N_sites), (
+        f"Inconsistent inputs: Δx={Δx}, but L/N_sites={L/N_sites}"
+    )
     for i in range(N_sites - 1):
         # print(
         #     "Python sorted site", i,
