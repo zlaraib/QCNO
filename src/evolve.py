@@ -34,6 +34,11 @@ def apply_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
         qc.ryy(2 * coef, qubit1, qubit2)
     elif pauli1 == 'Z' and pauli2 == 'Z':
         qc.rzz(2 * coef, qubit1, qubit2)
+    else:
+        raise ValueError(
+            f"Unsupported Pauli combination: ({pauli1}, {pauli2}). "
+            "Only ('X','X'), ('Y','Y'), and ('Z','Z') are allowed."
+        )
         
 def custom_rzz(qc, theta, qubit1, qubit2):
     # qc.barrier()
@@ -81,47 +86,13 @@ def apply_custom_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
         custom_ryy(qc, angle, qubit1, qubit2)
     elif pauli1 == 'Z' and pauli2 == 'Z':
         custom_rzz(qc, angle, qubit1, qubit2)
-
-def cartan_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
-    """
-    Implements the optimized quantum circuit for exp(-i * θ/2 * (X⊗X + Y⊗Y + Z⊗Z))
-    using the minimal number of CNOTs and single-qubit gates as shown in Fig. 3 DOI: 10.1103/PhysRevD.108.083039
-    """
-    theta = (2 * coef)
-    # if (pauli1 == 'Z' and pauli2 == 'Z') or (pauli1 == 'Y' and pauli2 == 'Y') or (pauli1 == 'X' and pauli2 == 'X'): #how to place these? is this source of error?
-        # First CNOT
-    qc.cx(qubit1, qubit2)
-    # First rotation gates
-    qc.rx(theta, qubit1)
-    qc.rz(theta, qubit2)
-    
-    # Middle Hadamard
-    qc.h(qubit1)
-
-    # Second CNOT
-    qc.cx(qubit1, qubit2)
-    # Middle S gate
-    qc.s(qubit1)
-
-    # Reverse Z rotation from earlier
-    qc.rz(-theta, qubit2)
-    
-    # Reverse Hadamard gate
-    qc.h(qubit1)
-
-    # Final CNOT
-    qc.cx(qubit1, qubit2)
-    
-    # Final X rotations
-    qc.rx(pi / 2, qubit1)
-    qc.rx(-pi / 2, qubit2)
     
 def cartan_two_qubit_gate(qc, coef, qubit1, qubit2):
     """
     Implements the optimized quantum circuit for exp(-i * θ/2 * (X⊗X + Y⊗Y + Z⊗Z))
     using the minimal number of CNOTs and single-qubit gates DOI: 10.1103/PhysRevD.108.083039
     """
-    theta = (2 * coef) + pi/2
+    theta = (2 * coef)
     
     # Barrier before starting the operation to group the whole sequence
     qc.barrier()
@@ -246,6 +217,11 @@ def print_julia_like_hamiltonian(pauli_terms, n_qubits, angle_factor):
 
     for pair in sorted(pair_groups):
         coef = pair_groups[pair]["coef"]
+        # Qiskit's rXX / rYY / rZZ implement exp(-i * θ/2 * σ⊗σ)
+        # Our Hamiltonian uses coef * (σ ⊗ σ)
+        # → To match exp(-i * coef * σ⊗σ * t), we need θ = 2 * coef * t
+        # Additionally, depending on normalization conventions (e.g. spin operators vs Pauli),
+        # an extra factor of 2 may appear. Hence overall factor 4 here.
         julia_like_coef = 4 * coef
         print(
             f"H 2-site term: pair={pair}, "
@@ -254,9 +230,23 @@ def print_julia_like_hamiltonian(pauli_terms, n_qubits, angle_factor):
         )
 def pauli_label_to_qiskit_ops(pauli, n_qubits):
     """
-    Qiskit Pauli labels are big-endian:
-    leftmost char -> qubit n_qubits-1
-    rightmost char -> qubit 0
+    Convert a Pauli string into a list of (qubit_index, operator) pairs.
+
+    Inputs:
+    - pauli: A Pauli operator (e.g., from Qiskit or a string like "IXYZ").
+      It represents a tensor product of single-qubit Pauli operators.
+    - n_qubits: Total number of qubits in the system.
+
+    Output:
+    - ops: A list of tuples (qubit, op), where:
+        * qubit is the integer index of the qubit the operator acts on
+        * op is one of 'X', 'Y', or 'Z'
+      Identity operators ('I') are ignored.
+
+    Note:
+    Qiskit uses big-endian ordering for Pauli labels:
+    - The leftmost character acts on qubit (n_qubits - 1)
+    - The rightmost character acts on qubit 0
     """
     label = pauli.to_label() if hasattr(pauli, "to_label") else str(pauli)
     ops = []
@@ -269,9 +259,27 @@ def pauli_label_to_qiskit_ops(pauli, n_qubits):
 
 def apply_qubit_permutation(qc, current_particle_ids, target_particle_ids):
     """
-    Reorder the live quantum state so qubit positions match target_particle_ids.
-    Both inputs are arrays of particle IDs indexed by qubit position.
+    Apply SWAP gates to reorder qubits so that their particle IDs match a desired layout.
+
+    Inputs:
+    - qc: A Qiskit QuantumCircuit. SWAP gates will be appended to this circuit.
+    - current_particle_ids: Array-like of length N, where index = qubit position
+      and value = particle ID currently stored at that qubit.
+      (i.e., current mapping: qubit → particle)
+    - target_particle_ids: Array-like of length N specifying the desired mapping:
+      at each qubit position, which particle ID should be present.
+
+    Output:
+    - qc: The same QuantumCircuit with SWAP operations added to implement the permutation.
+    - updated_particle_ids: NumPy array giving the final mapping (qubit → particle)
+      after applying the swaps. This should match target_particle_ids.
+
+    Behavior:
+    - The function iteratively swaps qubits so that each qubit position contains
+      the correct particle ID as specified by target_particle_ids.
+    - It updates the internal bookkeeping (current_particle_ids) alongside the circuit.
     """
+    # Think of this as physically shuffling qubits so particle labels line up with a target ordering.
     current_particle_ids = list(current_particle_ids)
     target_particle_ids = list(target_particle_ids)
 
@@ -294,14 +302,57 @@ def apply_one_timestep(
     N, x, Δp, L, shape_name, omega, B,
     n_qubits, Δx, p, geometric_name, trotter_steps, trotter_order, periodic
 ):
+    
+    """
+    Apply one full time-evolution step using Trotterization.
+
+    Inputs:
+    - qc: Qiskit QuantumCircuit to which gates are appended.
+    - τ: Total physical time for this timestep.
+
+    Hamiltonian parameters:
+    - N: Number of particles/modes.
+    - x: Positions array.
+    - Δp: Momentum spacing.
+    - L: System size.
+    - shape_name: Initial distribution shape.
+    - omega, B: Physical Hamiltonian parameters.
+
+    Discretization / system:
+    - n_qubits: Number of qubits (sites).
+    - Δx: Spatial lattice spacing (should satisfy Δx = L / n_qubits).
+    - p: Momentum values.
+    - geometric_name: Geometry type.
+    - periodic: Whether boundary conditions are periodic.
+
+    Trotterization:
+    - trotter_steps: Number of Trotter steps.
+    - trotter_order: 'first' (Lie-Trotter) or 'second' (Suzuki-Trotter).
+
+    Output:
+    - qc: QuantumCircuit with evolution gates for one timestep appended.
+    """
+    
     # Metadata are assumed already sorted and aligned with qubit order
+    
+    # Ensure consistency between Δx, L, and n_qubits
+    assert np.isclose(Δx, L / n_qubits), (
+        f"Inconsistent inputs: Δx={Δx} but L/n_qubits={L/n_qubits}"
+    )
     pauli_terms = construct_hamiltonian(
         N, x, Δp, L, shape_name, omega, B,
         n_qubits, Δx, p, geometric_name, periodic
     )
 
+    # τ = total physical time for this full step
+    # trotter_steps splits τ into smaller steps:
+    # dt = time per Trotter step
     dt = τ / trotter_steps
 
+
+    # dt_substep = effective time used in each exponential
+    # - first order: full dt per term
+    # - second order: half-step per term (due to symmetric decomposition)
     if trotter_order == 'first':
         dt_substep = dt / hbar
         angle_factor_for_print = τ / hbar
