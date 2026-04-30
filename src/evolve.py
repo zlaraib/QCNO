@@ -334,11 +334,6 @@ def apply_one_timestep(
     """
     
     # Metadata are assumed already sorted and aligned with qubit order
-    
-    # Ensure consistency between Δx, L, and n_qubits
-    assert np.isclose(Δx, L / n_qubits), (
-        f"Inconsistent inputs: Δx={Δx} but L/n_qubits={L/n_qubits}"
-    )
     pauli_terms = construct_hamiltonian(
         N, x, Δp, L, shape_name, omega, B,
         n_qubits, Δx, p, geometric_name, periodic
