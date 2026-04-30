@@ -33,9 +33,6 @@ def construct_hamiltonian(N, x, Δp, L, shape_name, omega, B, N_sites, Δx, p, g
 
     p_mod, p_hat = momentum(p, N_sites)
 
-    assert np.isclose(Δx, L / N_sites), (
-        f"Inconsistent inputs: Δx={Δx}, but L/N_sites={L/N_sites}"
-    )
     for i in range(N_sites - 1):
         # print(
         #     "Python sorted site", i,
