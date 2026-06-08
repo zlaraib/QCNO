@@ -145,7 +145,6 @@ def cartan_two_qubit_gate(qc, coef, qubit1, qubit2):
     qc.barrier()
 
 
-
 def optimized_two_qubit_circuit(qc, theta, qubit1, qubit2): #has no cnot min error in entaglement
     """Integrates the optimized two-qubit circuit into the given quantum circuit."""
     # Apply the Uq gate with theta = -pi/2 and phi = pi/2 to first qubit. 10.1103/PhysRevD.107.023007
@@ -296,16 +295,25 @@ def apply_qubit_permutation(qc, current_particle_ids, target_particle_ids):
 
     return qc, np.array(current_particle_ids)
 
-def apply_one_timestep(
+def apply_one_timestep_dynamic_positions(
     qc,
     τ,
     N, x, Δp, L, shape_name, omega, B,
-    n_qubits, Δx, p, geometric_name, trotter_steps, trotter_order, periodic
+    n_qubits, Δx, p, geometric_name,
+    trotter_steps, trotter_order, periodic,
+    particle_ids,
+    energy_sign,
+    advection,
 ):
-    
     """
-    Apply one full time-evolution step using Trotterization.
+    Apply one full physical timestep τ, but update particle positions
+    after every Trotter substep dt = τ / trotter_steps.
 
+    Returns updated:
+        qc, N, x, p, omega, particle_ids
+    """
+        
+    """
     Inputs:
     - qc: Qiskit QuantumCircuit to which gates are appended.
     - τ: Total physical time for this timestep.
@@ -332,38 +340,43 @@ def apply_one_timestep(
     Output:
     - qc: QuantumCircuit with evolution gates for one timestep appended.
     """
-    
-    # Metadata are assumed already sorted and aligned with qubit order
-    pauli_terms = construct_hamiltonian(
-        N, x, Δp, L, shape_name, omega, B,
-        n_qubits, Δx, p, geometric_name, periodic
-    )
 
     # τ = total physical time for this full step
     # trotter_steps splits τ into smaller steps:
     # dt = time per Trotter step
     dt = τ / trotter_steps
 
-
-    # dt_substep = effective time used in each exponential
-    # - first order: full dt per term
-    # - second order: half-step per term (due to symmetric decomposition)
-    if trotter_order == 'first':
-        dt_substep = dt / hbar
-        angle_factor_for_print = τ / hbar
-    elif trotter_order == 'second':
-        dt_substep = dt / (2 * hbar)
-        angle_factor_for_print = τ / (2 * hbar)
-        pauli_terms = pauli_terms + pauli_terms[::-1]
-    else:
-        raise ValueError("trotter_order must be 'first' or 'second'")
-
     for step in range(trotter_steps):
-        # print(f"\n=== Trotter step {step} ===")
+        print(f"\n=== Dynamic-position Trotter step {step} ===")
 
+        # -------------------------------------------------
+        # 1. Build Hamiltonian using current positions x
+        # -------------------------------------------------
+        pauli_terms = construct_hamiltonian(
+            N, x, Δp, L, shape_name, omega, B,
+            n_qubits, Δx, p, geometric_name, periodic
+        )
+
+        # dt_substep = effective time used in each exponential
+        # - first order: full dt per term
+        # - second order: half-step per term (due to symmetric decomposition)
+        if trotter_order == "first":
+            dt_substep = dt / hbar
+            angle_factor_for_print = τ / hbar
+
+        elif trotter_order == "second":
+            dt_substep = dt / (2 * hbar)
+            pauli_terms = pauli_terms + pauli_terms[::-1]
+            angle_factor_for_print = τ / (2 * hbar)
+
+        else:
+            raise ValueError("trotter_order must be 'first' or 'second'")
+
+        # -------------------------------------------------
+        # 2. Apply quantum evolution for this small dt
+        # -------------------------------------------------
         for term_id, (coef, pauli) in enumerate(pauli_terms):
             active_ops = pauli_label_to_qiskit_ops(pauli, n_qubits)
-            label = pauli.to_label()
             angle = coef * dt_substep
 
             # print(
@@ -379,5 +392,46 @@ def apply_one_timestep(
                 (q0, op0), (q1, op1) = active_ops
                 apply_two_qubit_gate(qc, angle, q0, q1, op0, op1)
 
+        if advection:
+
+            # -------------------------------------------------
+            # 3. Move particles by the smaller time dt
+            # -------------------------------------------------
+            p_mod, p_hat = momentum(p, n_qubits)
+            p_hat_x = np.asarray([sub_array[0] for sub_array in p_hat])
+
+            x = x + p_hat_x * c * dt
+
+            if periodic:
+                x = np.mod(x, L)
+                assert np.all(x >= 0) and np.all(x <= L)
+
+            # -------------------------------------------------
+            # 4. Resort metadata after particle motion
+            # -------------------------------------------------
+            perm = np.argsort(x)
+
+            x_new = np.asarray(x)[perm].copy()
+            p_new = np.asarray(p)[perm].copy()
+            N_new = np.asarray(N)[perm].copy()
+            omega_new = np.asarray(omega)[perm].copy()
+            particle_ids_new = particle_ids[perm].copy()
+            energy_sign_new = np.asarray(energy_sign)[perm].copy()
+
+            # -------------------------------------------------
+            # 5. Permute quantum state to match new sorted order
+            # -------------------------------------------------
+            qc, particle_ids_after = apply_qubit_permutation(
+                qc,
+                particle_ids,
+                particle_ids_new
+            )
+
+            x = x_new
+            p = p_new
+            N = N_new
+            omega = omega_new
+            particle_ids = particle_ids_after
+            energy_sign = energy_sign_new
     # print_julia_like_hamiltonian(pauli_terms, n_qubits, angle_factor_for_print)
-    return qc
+    return qc, N, x, p, omega, particle_ids, energy_sign
