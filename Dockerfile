@@ -9,4 +9,5 @@ RUN pip3 install qiskit
 RUN pip3 install qiskit-aer qiskit-algorithms qiskit-ibm-provider qiskit-ibm-runtime qiskit-nature qiskit_ionq pylatexenc
 ENV USER=jenkins
 ENV LOGNAME=jenkins
-ENV HOME=/var/lib/jenkins
+ENV HOME=/tmp
+ENV MPLCONFIGDIR=/tmp/matplotlib
