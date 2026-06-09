@@ -12,6 +12,11 @@ pipeline {
 	    sh 'nvcc -V'
 	    sh 'git submodule update --init'
 	    sh 'pip3 list'
+		sh 'echo HOME=$HOME'
+		sh 'echo USER=$USER'
+		sh 'echo LOGNAME=$LOGNAME'
+		sh 'pwd'
+		sh 'env | sort'
 }}
 
 
