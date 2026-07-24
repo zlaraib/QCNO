@@ -10,8 +10,7 @@ from qiskit import transpile
 from numpy import pi
 
 from qiskit.quantum_info import Pauli, Operator
-from qiskit.synthesis import TwoQubitBasisDecomposer
-from qiskit.circuit.library import StatePreparation
+from qiskit.circuit.library import StatePreparation, UnitaryGate
 
 from momentum import momentum
 from constants import hbar, c , eV, MeV, GeV, G_F, kB
@@ -19,165 +18,42 @@ from geometric_func import geometric_func
 from hamiltonian import construct_hamiltonian
 from perturb import pert_circuit
 
-def apply_single_qubit_gate(qc, coef, qubit, pauli):
-    if pauli == 'X':
-        qc.rx(2 * coef, qubit)
-    elif pauli == 'Y':
-        qc.ry(2 * coef, qubit)
-    elif pauli == 'Z':
-        qc.rz(2 * coef, qubit)
+# XX + YY + ZZ, precomputed once (real, symmetric 4x4 matrix).
+_H_JJ = Pauli('XX').to_matrix() + Pauli('YY').to_matrix() + Pauli('ZZ').to_matrix()
 
-def apply_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
-    if pauli1 == 'X' and pauli2 == 'X':
-        qc.rxx(2 * coef, qubit1, qubit2)
-    elif pauli1 == 'Y' and pauli2 == 'Y':
-        qc.ryy(2 * coef, qubit1, qubit2)
-    elif pauli1 == 'Z' and pauli2 == 'Z':
-        qc.rzz(2 * coef, qubit1, qubit2)
-    else:
-        raise ValueError(
-            f"Unsupported Pauli combination: ({pauli1}, {pauli2}). "
-            "Only ('X','X'), ('Y','Y'), and ('Z','Z') are allowed."
-        )
-        
-def custom_rzz(qc, theta, qubit1, qubit2):
-    # qc.barrier()
-    qc.cx(qubit1, qubit2)
-    # qc.barrier()
-    qc.rz(theta, qubit2)
-    # qc.barrier()
-    qc.cx(qubit1, qubit2)
+# Single-qubit Pauli matrices, for building per-site Hamiltonians.
+_X = Pauli('X').to_matrix()
+_Y = Pauli('Y').to_matrix()
+_Z = Pauli('Z').to_matrix()
 
-def custom_rxx(qc, theta, qubit1, qubit2):
-    # qc.barrier()
-    qc.h(qubit1)
-    # qc.barrier()
-    qc.h(qubit2)
-    custom_rzz(qc, theta, qubit1, qubit2)
-    # qc.barrier()
-    qc.h(qubit1)
-    # qc.barrier()
-    qc.h(qubit2)
-
-def custom_ryy(qc, theta, qubit1, qubit2):
-    # qc.barrier()
-    qc.sdg(qubit1)
-    # qc.barrier()
-    qc.sdg(qubit2)
-    # qc.barrier()
-    qc.h(qubit1)
-    # qc.barrier()
-    qc.h(qubit2)
-    custom_rzz(qc, theta, qubit1, qubit2)
-    # qc.barrier()
-    qc.h(qubit1)
-    # qc.barrier()
-    qc.h(qubit2)
-    # qc.barrier()
-    qc.s(qubit1)
-    # qc.barrier()
-    qc.s(qubit2)
-
-def apply_custom_two_qubit_gate(qc, coef, qubit1, qubit2, pauli1, pauli2):
-    angle = 2 * coef  # Calculate the rotation angle
-    if pauli1 == 'X' and pauli2 == 'X':
-        custom_rxx(qc, angle, qubit1, qubit2)
-    elif pauli1 == 'Y' and pauli2 == 'Y':
-        custom_ryy(qc, angle, qubit1, qubit2)
-    elif pauli1 == 'Z' and pauli2 == 'Z':
-        custom_rzz(qc, angle, qubit1, qubit2)
-    
-def cartan_two_qubit_gate(qc, coef, qubit1, qubit2):
+def apply_JJ_gate(qc, coef, qubit1, qubit2):
     """
-    Implements the optimized quantum circuit for exp(-i * θ/2 * (X⊗X + Y⊗Y + Z⊗Z))
-    using the minimal number of CNOTs and single-qubit gates DOI: 10.1103/PhysRevD.108.083039
+    Emit the isotropic two-site coupling exp(-i * coef * (X⊗X + Y⊗Y + Z⊗Z)) as a
+    single 2-qubit UnitaryGate.
+
+    The gate is left un-decomposed here on purpose: the transpiler synthesizes it
+    into the backend's native two-qubit gate via its built-in UnitarySynthesis pass
+    (see meas_counts). coef is the per-substep angle (coef * dt_substep from
+    apply_one_timestep_dynamic_positions); rxx(2*coef) = exp(-i*coef*X⊗X), and X⊗X,
+    Y⊗Y, Z⊗Z mutually commute so their product is this single exponential.
+    X⊗X + Y⊗Y + Z⊗Z is swap-symmetric, so qubit order is irrelevant.
     """
-    theta = (2 * coef)
-    
-    # Barrier before starting the operation to group the whole sequence
-    qc.barrier()
+    U = expm(-1j * coef * _H_JJ)
+    qc.append(UnitaryGate(U, label='JJ'), [qubit1, qubit2])
 
-    # First CNOT
-    qc.cx(qubit1, qubit2)
+def apply_single_site_gate(qc, B, qubit):
+    """
+    Emit a full single-site term exp(-i * (B[0]*X + B[1]*Y + B[2]*Z)) as one
+    1-qubit UnitaryGate, where B is the per-axis angle vector already scaled by
+    dt_substep in apply_one_timestep_dynamic_positions.
 
-    # Barrier after the first CNOT to isolate the next set of operations
-    qc.barrier()
-
-    # First rotation gates
-    qc.rx(theta, qubit1)
-    qc.rz(theta, qubit2)
-    
-    # Barrier after the rotations
-    qc.barrier()
-
-    # Middle Hadamard
-    qc.h(qubit1)
-
-    # Barrier before the second CNOT to separate logical operations
-    qc.barrier()
-
-    # Second CNOT
-    qc.cx(qubit1, qubit2)
-    
-    # Middle S gate
-    qc.s(qubit1)
-
-    # Barrier before reversing the operations
-    qc.barrier()
-
-    # Reverse Z rotation from earlier
-    qc.rz(-theta, qubit2)
-    
-    # Reverse Hadamard gate
-    qc.h(qubit1)
-
-    # Barrier before final CNOT to keep the final operations isolated
-    qc.barrier()
-
-    # Final CNOT
-    qc.cx(qubit1, qubit2)
-    
-    # Final X rotations
-    qc.rx(np.pi / 2, qubit1)
-    qc.rx(-np.pi / 2, qubit2)
-
-    # Final barrier to mark the end of this block of operations
-    qc.barrier()
-
-
-def optimized_two_qubit_circuit(qc, theta, qubit1, qubit2): #has no cnot min error in entaglement
-    """Integrates the optimized two-qubit circuit into the given quantum circuit."""
-    # Apply the Uq gate with theta = -pi/2 and phi = pi/2 to first qubit. 10.1103/PhysRevD.107.023007
-    qc.u(-pi/2, 0, 0, qubit1)
-    
-    # Apply the RZZ gate to generate the ZZ gate in the paper with theta = pi/2
-    qc.rzz(pi/2, qubit1, qubit2)
-    
-    # Apply the Uq gate with theta = pi/2 and phi = pi to first qubit
-    qc.u(pi/2, pi/2, -pi/2, qubit1)
-    
-    # Apply the Uq gate on the second qubit with theta = 2*theta
-    qc.u(2*theta, 0, 0, qubit2)
-    
-    # Apply the Rz gate with appropriate lambdas
-    qc.rz(2*theta - 3*pi/2, qubit1)
-    qc.rz(-3*pi/2, qubit2)
-    
-    # Apply the RZZ gate with theta = pi/2
-    qc.rzz(pi/2, qubit1, qubit2)
-    
-    # Apply the Uq gate again to first qubit
-    qc.u(-pi/2, 0, 0, qubit1)
-    qc.u(2*theta, 0, 0, qubit2)
-    
-    # Apply the Rz gate with lambda = -pi/2 to second qubit
-    qc.rz(-pi/2, qubit2)
-    
-    # Apply the RZZ gate with theta = pi/2
-    qc.rzz(pi/2, qubit1, qubit2)
-    
-    # Apply the final Uq gate to first qubit
-    qc.u(pi/2, pi/2, -pi/2, qubit1)
+    This groups a site's X, Y, Z rotations into a single exact single-qubit
+    unitary. X, Y, Z do not mutually commute, so emitting them as separate
+    rx/ry/rz rotations would itself be an intra-site Trotter split; the
+    exponential of the summed generator here avoids that.
+    """
+    U = expm(-1j * (B[0] * _X + B[1] * _Y + B[2] * _Z))
+    qc.append(UnitaryGate(U, label='BJ'), [qubit])
 
 
 def add_measurement_to_circuit(qc_base, n_qubits, measure='Z'):
@@ -195,38 +71,28 @@ def add_measurement_to_circuit(qc_base, n_qubits, measure='Z'):
     qc.barrier(label="after_measure")
     return qc
 
-def print_julia_like_hamiltonian(pauli_terms, n_qubits, angle_factor):
+def print_julia_like_hamiltonian(terms, n_qubits, angle_factor):
     print("\n=== Julia-like grouped Hamiltonian ===")
 
-    pair_groups = {}
-
-    for coef, pauli in pauli_terms:
-        active_ops = pauli_label_to_qiskit_ops(pauli, n_qubits)
-
-        if len(active_ops) == 2:
-            (q0, op0), (q1, op1) = active_ops
+    for coef, op, qubits in terms:
+        if op == 'JJ':
+            q0, q1 = qubits
+            # Julia uses 1-based site labels; qubit q maps back to site n_qubits - q.
             s0 = n_qubits - q0
             s1 = n_qubits - q1
             pair = tuple(sorted((s0, s1)))
 
-            if pair not in pair_groups:
-                pair_groups[pair] = {"coef": coef, "ops": []}
-
-            pair_groups[pair]["ops"].append(op0 + op1)
-
-    for pair in sorted(pair_groups):
-        coef = pair_groups[pair]["coef"]
-        # Qiskit's rXX / rYY / rZZ implement exp(-i * θ/2 * σ⊗σ)
-        # Our Hamiltonian uses coef * (σ ⊗ σ)
-        # → To match exp(-i * coef * σ⊗σ * t), we need θ = 2 * coef * t
-        # Additionally, depending on normalization conventions (e.g. spin operators vs Pauli),
-        # an extra factor of 2 may appear. Hence overall factor 4 here.
-        julia_like_coef = 4 * coef
-        print(
-            f"H 2-site term: pair={pair}, "
-            f"ops=(SzSz,SpSm,SmSp), coef={julia_like_coef}, "
-            f"angle_factor={angle_factor}"
-        )
+            # Qiskit's rXX / rYY / rZZ implement exp(-i * θ/2 * σ⊗σ)
+            # Our Hamiltonian uses coef * (σ ⊗ σ)
+            # → To match exp(-i * coef * σ⊗σ * t), we need θ = 2 * coef * t
+            # Additionally, depending on normalization conventions (e.g. spin operators vs Pauli),
+            # an extra factor of 2 may appear. Hence overall factor 4 here.
+            julia_like_coef = 4 * coef
+            print(
+                f"H 2-site term: pair={pair}, "
+                f"ops=(SzSz,SpSm,SmSp), coef={julia_like_coef}, "
+                f"angle_factor={angle_factor}"
+            )
 def pauli_label_to_qiskit_ops(pauli, n_qubits):
     """
     Convert a Pauli string into a list of (qubit_index, operator) pairs.
@@ -375,22 +241,20 @@ def apply_one_timestep_dynamic_positions(
         # -------------------------------------------------
         # 2. Apply quantum evolution for this small dt
         # -------------------------------------------------
-        for term_id, (coef, pauli) in enumerate(pauli_terms):
-            active_ops = pauli_label_to_qiskit_ops(pauli, n_qubits)
+        for term_id, (coef, op, qubits) in enumerate(pauli_terms):
             angle = coef * dt_substep
 
             # print(
-            #     f"H term {term_id}: label={label}, "
-            #     f"active_ops={active_ops}, coef={coef}, angle={angle}"
+            #     f"H term {term_id}: op={op}, qubits={qubits}, "
+            #     f"coef={coef}, angle={angle}"
             # )
 
-            if len(active_ops) == 1:
-                qubit, op = active_ops[0]
-                apply_single_qubit_gate(qc, angle, qubit, op)
-
-            elif len(active_ops) == 2:
-                (q0, op0), (q1, op1) = active_ops
-                apply_two_qubit_gate(qc, angle, q0, q1, op0, op1)
+            if op == 'JJ':
+                apply_JJ_gate(qc, angle, qubits[0], qubits[1])
+            elif op == 'BJ':
+                apply_single_site_gate(qc, angle, qubits[0])
+            else:
+                raise ValueError(f"Unknown Hamiltonian term op: {op!r}")
 
         if advection:
 
