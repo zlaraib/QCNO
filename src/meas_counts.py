@@ -1,4 +1,7 @@
 
+import os
+import csv
+
 from qiskit import transpile
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit_ibm_runtime import SamplerV2 as Sampler
@@ -15,6 +18,40 @@ from qiskit_ibm_runtime import QiskitRuntimeService
 # IonQ's own compiler convert to native gates. This also synthesizes the JJ/BJ
 # UnitaryGates into cx + single-qubit rotations so nothing 'unitary' is submitted.
 _QIS_BASIS = ["rx", "ry", "rz", "cx", "h", "s", "sdg", "x"]
+
+# Per-call circuit-size log. One row per meas_counts call, written to CSV instead of
+# to screen. count_ops() is an OrderedDict; it is stored as a single stringified cell
+# (csv quoting handles its internal commas).
+_CIRCUIT_LOG_COLUMNS = [
+    "iteration",
+    "measurement_basis",
+    "initial_depth",
+    "final_depth",
+    "initial_counts",
+    "final_counts",
+    "shot_counts",
+]
+# Log paths whose header has already been written in THIS process. A re-run is a
+# fresh Python process, so this set starts empty: the first write of a run opens the
+# file in "w" mode (overwrite the stale file + write header), and later writes in the
+# same run append.
+_initialized_circuit_logs = set()
+
+def _log_circuit_info(log_path, row, backend_name=None):
+    directory = os.path.dirname(log_path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
+    first_write = log_path not in _initialized_circuit_logs
+    with open(log_path, "w" if first_write else "a", newline="") as f:
+        writer = csv.writer(f, lineterminator="\n")
+        if first_write:
+            # Backend is constant for the whole run, so record it once at the top of
+            # the file rather than as a repeated column on every row.
+            f.write(f"# backend: {backend_name}\n")
+            writer.writerow(_CIRCUIT_LOG_COLUMNS)
+            _initialized_circuit_logs.add(log_path)
+        writer.writerow(row)
 
 def get_direct_state(qc_base, backend, optimization_level):
     """
@@ -81,6 +118,7 @@ def meas_counts(
     two_qubit_gate=None,
     euler_basis=None,
     basis_gates=None,
+    iteration=None,
 ):
     # two_qubit_gate / euler_basis / basis_gates are accepted for call-signature
     # compatibility with the test notebooks but are no longer used: the JJ/BJ terms
@@ -88,17 +126,10 @@ def meas_counts(
     # UnitarySynthesis pass lowers them to each backend's native two-qubit gate. The
     # old manual TwoQubitBasisDecomposer step this triggered is gone. (Removing these
     # params from the notebook call chain is a separate cleanup.)
+    #
+    # iteration only labels the row this call writes to the circuit-size log; pass the
+    # timestep index once it is threaded down from the callers (blank until then).
     qc = add_measurement_to_circuit(qc_base, N_sites, measure=measure)
-
-    print(f"\n{'=' * 70}")
-    print(f"MEASUREMENT BASIS = {measure}")
-    print(f"BACKEND NAME      = {backend_name}")
-    print(f"{'=' * 70}")
-
-    print("\n[1] LOGICAL CIRCUIT BEFORE BACKEND TRANSPILATION")
-    print("Gate counts:")
-    print(qc.count_ops())
-    print("Logical depth:", qc.depth())
 
     ibm_backends = {"manila", "ibm", "guadalupe"}
     ionq_backends = {"ionq_simulator", "ionq_noisy_sim", "ionq_qpu"}
@@ -157,14 +188,9 @@ def meas_counts(
             "Expected IBM, IonQ, or Aer backend."
         )
 
-    # Common lowering step for every backend: produce the ISA circuit once, then
-    # branch below only on how to *execute* it.
+    # Common lowering step for every backend: produce the ISA circuit once, log its
+    # size to file, then branch below only on how to *execute* it.
     isa_circuit = to_isa(qc)
-
-    print("\n[2] FINAL ISA CIRCUIT")
-    print("Gate counts:")
-    print(isa_circuit.count_ops())
-    print("Final depth:", isa_circuit.depth())
 
     if is_aer_backend:
         sampler = Sampler(mode=backend)
@@ -176,10 +202,6 @@ def meas_counts(
         except Exception:
             data_keys = list(result[0].data.keys())
             counts = getattr(result[0].data, data_keys[0]).get_counts()
-
-        print("\n[AER SHOT COUNTS]")
-        print(counts)
-        return counts, isa_circuit
 
     elif backend_name in ionq_backends:
         # IonQ rejects high-level / opaque gates; the abstract-basis transpile above
@@ -199,42 +221,42 @@ def meas_counts(
         job = backend.run(isa_circuit, shots=shots)
         counts = job.get_counts()
 
-        print("\n[IONQ SHOT COUNTS]")
-        print(counts)
-        return counts, isa_circuit
-
     elif backend_name in ibm_backends:
-        backend_display_name = getattr(backend, "name", "unknown")
-        if callable(backend_display_name):
-            backend_display_name = backend_display_name()
-        print(f"Backend: {backend_display_name}")
-
         if backend_name in {"manila", "guadalupe"}:
             result = backend.run(isa_circuit, shots=shots).result()
             counts = result.get_counts()
 
-            print("\n[IBM FAKE BACKEND SHOT COUNTS]")
-            print(counts)
-            return counts, isa_circuit
+        else:
+            sampler = Sampler(mode=backend)
+            job = sampler.run([isa_circuit], shots=shots)
+            result = job.result()
 
-        sampler = Sampler(mode=backend)
-        job = sampler.run([isa_circuit], shots=shots)
-        result = job.result()
+            pub_result = result[0]
 
-        pub_result = result[0]
-
-        try:
-            counts = pub_result.data.meas.get_counts()
-        except Exception:
-            data_keys = list(pub_result.data.keys())
-            counts = getattr(pub_result.data, data_keys[0]).get_counts()
-
-        print("\n[IBM HARDWARE SHOT COUNTS]")
-        print(counts)
-        return counts, isa_circuit
+            try:
+                counts = pub_result.data.meas.get_counts()
+            except Exception:
+                data_keys = list(pub_result.data.keys())
+                counts = getattr(pub_result.data, data_keys[0]).get_counts()
 
     else:
         raise ValueError(
             f"Unsupported backend_name={backend_name}. "
             "Expected IBM, IonQ, or Aer backend."
         )
+
+    _log_circuit_info(
+        "datafiles/circuit_info.csv",
+        [
+            iteration,
+            measure,
+            qc.depth(),
+            isa_circuit.depth(),
+            qc.count_ops(),
+            isa_circuit.count_ops(),
+            counts,
+        ],
+        backend_name=backend_name,
+    )
+    return counts, isa_circuit
+

@@ -213,7 +213,7 @@ def apply_one_timestep_dynamic_positions(
     dt = τ / trotter_steps
 
     for step in range(trotter_steps):
-        print(f"\n=== Dynamic-position Trotter step {step} ===")
+        print(f"   Dynamic-position Trotter step {step}")
 
         # -------------------------------------------------
         # 1. Build Hamiltonian using current positions x
