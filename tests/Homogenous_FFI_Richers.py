@@ -60,7 +60,7 @@ from sigma_statistics import calc_mean_and_sigma
 from constants import hbar, c , eV, MeV, GeV, G_F, kB
 from evolve import apply_qubit_permutation, apply_one_timestep_dynamic_positions
 from perturb import pert_circuit
-from activate_backend import activate_backends, build_backend
+from activate_backend import activate_backends, build_backend, backend_supports_direct_state
 
 
 # In[ ]:
@@ -247,22 +247,6 @@ def get_counts_and_sigmas(qc_base, N_sites, backend,backend_name, optimization_l
 
 
 # In[ ]:
-
-
-def backend_supports_direct_state(backend, backend_name=None):
-    if backend_name is not None:
-        name = str(backend_name).lower()
-        # only allow true Aer simulator backends for direct state access
-        return "aer" in name
-
-    name_attr = getattr(backend, "name", None)
-    if callable(name_attr):
-        name_attr = name_attr()
-    if name_attr is None:
-        name_attr = str(backend)
-
-    name_attr = str(name_attr).lower()
-    return "aer" in name_attr
 
 
 # In[ ]:
