@@ -221,30 +221,6 @@ def initialize_parameters(N_sites, delta_omega, ibm_service, ionq_provider):
 # In[ ]:
 
 
-def get_counts_and_sigmas(qc_base, N_sites, backend, backend_name, optimization_level, shots,
-    two_qubit_gate,
-    euler_basis,
-    basis_gates, df=0):
-    counts_z, isa_circuit_z = meas_counts(
-        qc_base, 'Z', N_sites, backend, backend_name, optimization_level, shots,
-        two_qubit_gate, euler_basis, basis_gates
-    )
-    sigma_z, _ = calc_mean_and_sigma(counts_z, shots, 'Z', N_sites, df=df)
-
-    sigma_z = np.asarray(sigma_z)[::-1]
-
-    return {
-        "sigma_z": sigma_z,
-        "isa_circuit_z": isa_circuit_z,
-    }
-
-
-# In[ ]:
-
-
-# In[ ]:
-
-
 def simulate(
     times, omega, energy_sign, x, Δp, L, shape_name, N_sites, theta_nu,
     geometric_name, bit_list, backend, backend_name, shots, τ, df, ttotal,
@@ -333,25 +309,15 @@ def simulate(
             # -------------------------------
             # 1) Measurement-based sigma_z from counts
             # -------------------------------
-            meas_data = get_counts_and_sigmas(
-                qc_base=qc_base,
-                N_sites=N_sites,
-                backend=backend,
-                backend_name=backend_name,
-                optimization_level=optimization_level,
-                shots=shots,
-                two_qubit_gate=two_qubit_gate,
-                euler_basis=euler_basis,
-                basis_gates=basis_gates,
-                df=df
+            counts_z, isa_circuit_z = meas_counts(
+                qc_base, 'Z', N_sites, backend, backend_name, optimization_level,
+                shots, two_qubit_gate, euler_basis, basis_gates
             )
-
-            isa_circuit_z = meas_data["isa_circuit_z"]
+            sigma_z_sorted, _ = calc_mean_and_sigma(counts_z, shots, 'Z', N_sites, df=df)
+            sigma_z_sorted = np.asarray(sigma_z_sorted)[::-1]
 
             if np.isclose(t, τ, rtol=0.0, atol=1e-15):
                 isa_circuit_z_first = isa_circuit_z
-
-            sigma_z_sorted = meas_data["sigma_z"]
             sigma_z_original = reorder_sorted_to_original(sigma_z_sorted, particle_ids)
             sigma_z_values.append(sigma_z_original.copy())
 

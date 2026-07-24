@@ -161,72 +161,6 @@ def initialize_parameters(ibm_service, ionq_provider):
 # In[ ]:
 
 
-def get_counts_and_sigmas(qc_base, N_sites, backend, backend_name, optimization_level, 
-    shots,    
-    two_qubit_gate,
-    euler_basis,
-    basis_gates, df=0):
-    counts_z, isa_circuit_z = meas_counts(
-        qc_base,
-        "Z",
-        N_sites,
-        backend,
-        backend_name,
-        optimization_level,
-        shots,
-        two_qubit_gate,
-        euler_basis,
-        basis_gates,
-    )
-
-    counts_x, isa_circuit_x = meas_counts(
-        qc_base,
-        "X",
-        N_sites,
-        backend,
-        backend_name,
-        optimization_level,
-        shots,
-        two_qubit_gate,
-        euler_basis,
-        basis_gates,
-    )
-
-    counts_y, isa_circuit_y = meas_counts(
-        qc_base,
-        "Y",
-        N_sites,
-        backend,
-        backend_name,
-        optimization_level,
-        shots,
-        two_qubit_gate,
-        euler_basis,
-        basis_gates,
-    )
-
-
-    sigma_z, _ = calc_mean_and_sigma(counts_z, shots, "Z", N_sites, df=df)
-    sigma_x, _ = calc_mean_and_sigma(counts_x, shots, "X", N_sites, df=df)
-    sigma_y, _ = calc_mean_and_sigma(counts_y, shots, "Y", N_sites, df=df)
-
-    sigma_x = np.asarray(sigma_x, dtype=float)[::-1]
-    sigma_y = np.asarray(sigma_y, dtype=float)[::-1]
-    sigma_z = np.asarray(sigma_z, dtype=float)[::-1]
-
-    return {
-        "sigma_x": sigma_x,
-        "sigma_y": sigma_y,
-        "sigma_z": sigma_z,
-        "isa_circuit_z": isa_circuit_z,
-        "isa_circuit_x": isa_circuit_x,
-        "isa_circuit_y": isa_circuit_y,
-    }
-
-
-# In[ ]:
-
-
 def simulate(params):
     # record the exact inputs of this run before anything mutates them
     write_run_parameters("datafiles/run_parameters.json", params)
@@ -333,22 +267,26 @@ def simulate(params):
             expected_Sz_site1.append(expected_sz)
             expected_sigma_z_site1.append(expected_sigma_z)
             
-            meas_data = get_counts_and_sigmas(
-                qc_base=qc_base,
-                N_sites=N_sites,
-                backend=backend,
-                backend_name=backend_name_local,
-                optimization_level=optimization_level,
-                shots=shots,
-                two_qubit_gate=two_qubit_gate,
-                euler_basis=euler_basis,
-                basis_gates=basis_gates,
-                df=df,
+            counts_z, isa_circuit_z = meas_counts(
+                qc_base, "Z", N_sites, backend, backend_name_local, optimization_level,
+                shots, two_qubit_gate, euler_basis, basis_gates,
+            )
+            counts_x, isa_circuit_x = meas_counts(
+                qc_base, "X", N_sites, backend, backend_name_local, optimization_level,
+                shots, two_qubit_gate, euler_basis, basis_gates,
+            )
+            counts_y, isa_circuit_y = meas_counts(
+                qc_base, "Y", N_sites, backend, backend_name_local, optimization_level,
+                shots, two_qubit_gate, euler_basis, basis_gates,
             )
 
-            sigma_x = np.asarray(meas_data["sigma_x"], dtype=float)
-            sigma_y = np.asarray(meas_data["sigma_y"], dtype=float)
-            sigma_z = np.asarray(meas_data["sigma_z"], dtype=float)
+            sigma_z, _ = calc_mean_and_sigma(counts_z, shots, "Z", N_sites, df=df)
+            sigma_x, _ = calc_mean_and_sigma(counts_x, shots, "X", N_sites, df=df)
+            sigma_y, _ = calc_mean_and_sigma(counts_y, shots, "Y", N_sites, df=df)
+
+            sigma_x = np.asarray(sigma_x, dtype=float)[::-1]
+            sigma_y = np.asarray(sigma_y, dtype=float)[::-1]
+            sigma_z = np.asarray(sigma_z, dtype=float)[::-1]
 
             sigma_x_all_times.append(sigma_x.copy())
             sigma_y_all_times.append(sigma_y.copy())
@@ -359,7 +297,7 @@ def simulate(params):
 
             sigma_z_site1_values.append(sigma_z_site1)
             Sz_site1_values.append(Sz_site1)
-            last_circuit = meas_data["isa_circuit_z"]
+            last_circuit = isa_circuit_z
 
             print(f"t = {t:.8e}, sigma_z_site1 = {sigma_z_site1:.8e}, <Sz>_site1 = {Sz_site1:.8e}")
 

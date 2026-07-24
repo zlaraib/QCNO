@@ -201,57 +201,6 @@ def get_rho_at_time(time_array, rho_array, target_time):
 # In[ ]:
 
 
-def get_counts_and_sigmas(qc_base, N_sites, backend,backend_name, optimization_level, shots,    two_qubit_gate,
-    euler_basis,
-    basis_gates, df=0):
-    counts_z, isa_circuit_z = meas_counts(
-        qc_base, 'Z', N_sites, backend, backend_name, optimization_level, shots,
-        two_qubit_gate, euler_basis, basis_gates
-    )
-    counts_x, isa_circuit_x = meas_counts(
-        qc_base, 'X', N_sites, backend, backend_name, optimization_level, shots,
-        two_qubit_gate, euler_basis, basis_gates
-    )
-    counts_y, isa_circuit_y = meas_counts(
-        qc_base, 'Y', N_sites, backend, backend_name, optimization_level, shots,
-        two_qubit_gate, euler_basis, basis_gates
-    )
-
-    sigma_z, std_sigma_z = calc_mean_and_sigma(counts_z, shots, 'Z', N_sites, df=df)
-    sigma_x, std_sigma_x = calc_mean_and_sigma(counts_x, shots, 'X', N_sites, df=df)
-    sigma_y, std_sigma_y = calc_mean_and_sigma(counts_y, shots, 'Y', N_sites, df=df)
-
-    # Reverse if your calc_mean_and_sigma returns Qiskit bitstring order
-    sigma_x = np.asarray(sigma_x)[::-1]
-    sigma_y = np.asarray(sigma_y)[::-1]
-    sigma_z = np.asarray(sigma_z)[::-1]
-
-    rho_ee_sites = (sigma_z + 1.0) / 2.0
-    rho_mumu_sites = (-sigma_z + 1.0) / 2.0
-    rho_emu_sites = 0.5 * np.sqrt(sigma_x**2 + sigma_y**2)
-
-    return {
-        "counts_z": counts_z,
-        "counts_x": counts_x,
-        "counts_y": counts_y,
-        "sigma_x": sigma_x,
-        "sigma_y": sigma_y,
-        "sigma_z": sigma_z,
-        "rho_ee": rho_ee_sites,
-        "rho_mumu": rho_mumu_sites,
-        "rho_emu": rho_emu_sites,
-        "isa_circuit_z": isa_circuit_z,
-        "isa_circuit_x": isa_circuit_x,
-        "isa_circuit_y": isa_circuit_y,
-    }
-
-
-# In[ ]:
-
-
-# In[ ]:
-
-
 def evolve_and_simulate(
     times, omega, energy_sign, delta_m_squared, Eνₑ, t1, t2,
     N, B, B_pert, alpha, Δx, Δp, shape_name, N_sites, x, p, L,
@@ -361,33 +310,34 @@ def evolve_and_simulate(
             # -------------------------------
             # 1) Measurement-based rho from counts
             # -------------------------------
-            meas_data = get_counts_and_sigmas(
-                qc_base=qc_base,
-                N_sites=N_sites,
-                backend=backend,
-                backend_name=backend_name,
-                optimization_level=optimization_level,
-                shots=shots,
-                two_qubit_gate=two_qubit_gate,
-                euler_basis=euler_basis,
-                basis_gates=basis_gates,
-                df=df
+            counts_z, isa_circuit_z = meas_counts(
+                qc_base, 'Z', N_sites, backend, backend_name, optimization_level,
+                shots, two_qubit_gate, euler_basis, basis_gates
+            )
+            counts_x, isa_circuit_x = meas_counts(
+                qc_base, 'X', N_sites, backend, backend_name, optimization_level,
+                shots, two_qubit_gate, euler_basis, basis_gates
+            )
+            counts_y, isa_circuit_y = meas_counts(
+                qc_base, 'Y', N_sites, backend, backend_name, optimization_level,
+                shots, two_qubit_gate, euler_basis, basis_gates
             )
 
-            isa_circuit_z = meas_data["isa_circuit_z"]
-            isa_circuit_x = meas_data["isa_circuit_x"]
-            isa_circuit_y = meas_data["isa_circuit_y"]
+            sigma_z_sorted, _ = calc_mean_and_sigma(counts_z, shots, 'Z', N_sites, df=df)
+            sigma_x_sorted, _ = calc_mean_and_sigma(counts_x, shots, 'X', N_sites, df=df)
+            sigma_y_sorted, _ = calc_mean_and_sigma(counts_y, shots, 'Y', N_sites, df=df)
+
+            # Reverse if calc_mean_and_sigma returns Qiskit bitstring order
+            sigma_x_sorted = np.asarray(sigma_x_sorted)[::-1]
+            sigma_y_sorted = np.asarray(sigma_y_sorted)[::-1]
+            sigma_z_sorted = np.asarray(sigma_z_sorted)[::-1]
+
+            rho_ee_sorted = (sigma_z_sorted + 1.0) / 2.0
+            rho_mumu_sorted = (-sigma_z_sorted + 1.0) / 2.0
+            rho_emu_sorted = 0.5 * np.sqrt(sigma_x_sorted**2 + sigma_y_sorted**2)
 
             if np.isclose(t, τ, rtol=0.0, atol=1e-15):
                 isa_circuit_z_first = isa_circuit_z
-
-            sigma_x_sorted = meas_data["sigma_x"]
-            sigma_y_sorted = meas_data["sigma_y"]
-            sigma_z_sorted = meas_data["sigma_z"]
-
-            rho_ee_sorted = np.asarray(meas_data["rho_ee"])
-            rho_mumu_sorted = np.asarray(meas_data["rho_mumu"])
-            rho_emu_sorted = np.asarray(meas_data["rho_emu"])
 
             # reorder sorted-site arrays -> original physical-particle order
             sigma_x_original = reorder_sorted_to_original(sigma_x_sorted, particle_ids)
