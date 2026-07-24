@@ -54,6 +54,7 @@ sys.path.append(src_dir)
 from hamiltonian import construct_hamiltonian
 from momentum import momentum
 from meas_counts import get_direct_state, meas_counts
+from base_circuit import initialize_base_circuit
 from run_parameters import write_run_parameters
 from sigma_statistics import calc_mean_and_sigma
 from constants import hbar, c , eV, MeV, GeV, G_F, kB
@@ -195,25 +196,6 @@ def get_rho_at_time(time_array, rho_array, target_time):
 # In[ ]:
 
 
-def initialize_base_circuit(n_qubits, bit_list_sorted=None, B_pert=None, alpha=None):
-    qc = QuantumCircuit(n_qubits, n_qubits)
-
-    if bit_list_sorted is None:
-        raise ValueError("bit_list_sorted must be provided")
-
-    bitstr = ''.join(bit_list_sorted)
-    print("init bit_list_sorted =", bit_list_sorted)
-    print("init bitstr =", bitstr)
-
-    prep = StatePreparation(bitstr[::-1])  # Qiskit endianness
-    qc.append(prep, qargs=range(n_qubits))
-    qc.barrier(label="after_init")
-
-    if B_pert is not None:
-        pert_circuit(qc, B_pert, n_qubits, alpha)
-        qc.barrier(label="after_pert")
-
-    return qc
 
 
 # In[ ]:

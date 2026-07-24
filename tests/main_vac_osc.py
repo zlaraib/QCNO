@@ -21,6 +21,7 @@ if src_dir not in sys.path:
     sys.path.append(src_dir)
 
 from meas_counts import meas_counts
+from base_circuit import initialize_base_circuit
 from run_parameters import write_run_parameters
 from sigma_statistics import calc_mean_and_sigma
 from constants import hbar, eV, MeV, G_F
@@ -155,28 +156,6 @@ def initialize_parameters(ibm_service, ionq_provider):
 # In[ ]:
 
 
-def initialize_base_circuit(n_qubits, bit_list_sorted, B_pert=None, alpha=None):
-    qc = QuantumCircuit(n_qubits, n_qubits)
-
-    if bit_list_sorted is None:
-        raise ValueError("bit_list_sorted must be provided")
-
-    bitstr = "".join(bit_list_sorted)
-    print("init bit_list_sorted =", bit_list_sorted)
-    print("init bitstr =", bitstr)
-
-    # Reverse for Qiskit's little-endian convention
-    prep = StatePreparation(bitstr[::-1])
-    qc.append(prep, qargs=range(n_qubits))
-    qc.barrier(label="after_init")
-
-    if B_pert is not None:
-        if pert_circuit is None:
-            raise ImportError("B_pert was provided, but pert_circuit could not be imported.")
-        pert_circuit(qc, B_pert, n_qubits, alpha)
-        qc.barrier(label="after_pert")
-
-    return qc
 
 
 # In[ ]:
