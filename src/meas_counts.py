@@ -14,6 +14,7 @@ import numpy as np
 from qiskit_aer.noise import NoiseModel
 from qiskit_ibm_runtime.fake_provider import FakeManilaV2
 from qiskit_ibm_runtime import QiskitRuntimeService
+from qiskit.circuit.library import RXXGate
 
 def get_direct_state(qc_base, backend, optimization_level):
     """
@@ -77,27 +78,24 @@ def meas_counts(
     backend_name,
     optimization_level,
     shots,
-    two_qubit_gate,
-    euler_basis,
-    basis_gates,
+    two_qubit_gate=None,
+    euler_basis=None,
+    basis_gates=None,
 ):
     qc = add_measurement_to_circuit(qc_base, N_sites, measure=measure)
 
-    # print("\nOriginal Circuit:")
-    # print(qc.draw())
-    # Print the gate counts in the original circuit
-    gate_counts = qc.count_ops()
-    # print("\nGate counts in the original circuit:")
-    print(gate_counts)
+    print(f"\n{'=' * 70}")
+    print(f"MEASUREMENT BASIS = {measure}")
+    print(f"BACKEND NAME      = {backend_name}")
+    print(f"{'=' * 70}")
 
-    # # Circuit depth = The maximum number of gates (or operations) applied sequentially on any qubit in the circuit. This is equivalent to the longest "path" of operations in the circuit.
-    # # Depth provides a measure of how many time steps are required to execute the circuit i.e. layers of gates reuired in the circuit to execute from start to finish.
-    print("Circuit depth= ", qc.depth())
-
-    # qc = transpile(qc, basis_gates=NoiseModel.from_backend(backend).basis_gates, coupling_map=backend.configuration().coupling_map, optimization_level=optimization_level)
+    print("\n[1] LOGICAL CIRCUIT BEFORE BACKEND TRANSPILATION")
+    print("Gate counts:")
+    print(qc.count_ops())
+    print("Logical depth:", qc.depth())
 
     ibm_backends = {"manila", "ibm", "guadalupe"}
-    ionq_backends = {"ionq", "ionq_noisy_sim", "ionq_native", "ionq_qpu"}
+    ionq_backends = {"ionq_simulator", "ionq_noisy_sim", "ionq_qpu"}
 
     backend_name_attr = getattr(backend, "name", None)
     if callable(backend_name_attr):
@@ -107,22 +105,30 @@ def meas_counts(
         backend_name_attr is not None and "aer" in backend_name_attr.lower()
     )
 
-    if backend_name in ibm_backends or backend_name in ionq_backends:
-        if two_qubit_gate is None:
-            raise ValueError(
-                f"backend_name={backend_name} requires two_qubit_gate "
-                "to be passed from initialize_parameters()."
+    def decompose_to_requested_basis(input_qc, label):
+        if two_qubit_gate is None or euler_basis is None or basis_gates is None:
+            print(f"\n[2] BASIC QIS TRANSPILATION FOR {label}")
+            out_qc = transpile(
+                input_qc,
+                basis_gates=["rx", "ry", "rz", "cx", "h", "s", "sdg", "x"],
+                optimization_level=optimization_level,
             )
+            print("Gate counts:")
+            print(out_qc.count_ops())
+            print("Depth after basic QIS transpilation:", out_qc.depth())
+            return out_qc
 
-        if euler_basis is None or basis_gates is None:
+        if backend_name in {"ionq_simulator", "ionq_noisy_sim"} and "ms" in basis_gates:
             raise ValueError(
-                f"backend_name={backend_name} requires euler_basis and basis_gates "
-                "to be passed from initialize_parameters()."
+                "basis_gates contains 'ms'. This function does not support "
+                "IonQ native MS submission. Use ionq_simulator/noisy_sim with RXX "
+                "or build a separate native-gate circuit."
             )
 
         gate_map = {
             "ECR": ECRGate(),
             "CX": CXGate(),
+            "RXX": RXXGate(np.pi / 2),
         }
 
         if two_qubit_gate not in gate_map:
@@ -130,9 +136,6 @@ def meas_counts(
                 f"Unsupported two_qubit_gate={two_qubit_gate}. "
                 f"Allowed values are {list(gate_map.keys())}."
             )
-
-        basis_gate_obj = gate_map[two_qubit_gate]
-
         # decomposes all the 2 qubit gates in the circuit for 1 time step and optimizes all those 2-qubit gates as a whole for each time step. 
 
         # Decompose two-qubit gates using KAK decomposition
@@ -149,22 +152,22 @@ def meas_counts(
 
         # Decompose two-qubit gates using the Euler basis and two-qubit gate
         # selected in initialize_parameters() for the chosen backend.
+
         decomposer = TwoQubitBasisDecomposer(
-            basis_gate_obj,
+            gate_map[two_qubit_gate],
             euler_basis=euler_basis,
         )
 
         # Create a new quantum circuit to hold the decomposed gates
-        new_qc = QuantumCircuit(*qc.qregs, *qc.cregs)
+        new_qc = QuantumCircuit(*input_qc.qregs, *input_qc.cregs)
 
-        for inst in qc.data:
+        for inst in input_qc.data:
             gate = inst.operation
             qargs = inst.qubits
             cargs = inst.clbits
 
-            # map old bits to positions in the new circuit
-            new_qargs = [new_qc.qubits[qc.find_bit(q).index] for q in qargs]
-            new_cargs = [new_qc.clbits[qc.find_bit(c).index] for c in cargs]
+            new_qargs = [new_qc.qubits[input_qc.find_bit(q).index] for q in qargs]
+            new_cargs = [new_qc.clbits[input_qc.find_bit(c).index] for c in cargs]
 
             if gate.num_qubits == 2:
                 unitary_matrix = Operator(gate).data
@@ -173,38 +176,21 @@ def meas_counts(
             else:
                 new_qc.append(gate, new_qargs, new_cargs)
 
-        # # Print the decomposed circuit
-        # print("\nDecomposed Circuit:")
-        # # print(new_qc.draw())
-        # # Print the gate counts in the decomposed circuit
-        # gate_counts = new_qc.count_ops()
-        # print("\nGate counts in the decomposed circuit:")
-        # print(gate_counts)
-        # print("Circuit depth in decomposed circuit= ", new_qc.depth())
-        # print(backend.configuration().basis_gates)
-
-        # Transpile the new circuit using the basis gates selected in
-        # initialize_parameters() for the chosen backend.
-        # For IBM, this may be basis_gates=['rz', 'sx', 'x', 'cx', 'u3'].
-        # For IonQ, this may be basis_gates=['rx', 'ry', 'rxx', 'ms'].
-        transpiled_circuit = transpile(
+        out_qc = transpile(
             new_qc,
             basis_gates=basis_gates,
             optimization_level=optimization_level,
         )
 
-        qc = transpiled_circuit
+        print(f"\n[2] AFTER CUSTOM BASIS TRANSPILATION FOR {label}")
+        print(f"two_qubit_gate = {two_qubit_gate}")
+        print(f"euler_basis    = {euler_basis}")
+        print(f"basis_gates    = {basis_gates}")
+        print("Gate counts:")
+        print(out_qc.count_ops())
+        print("Depth after custom basis transpilation:", out_qc.depth())
 
-        # # qc = transpile(qc, backend=backend, basis_gates=['rx', 'ry', 'rz', 'cx']) #added basis gateset for testing the noise model, can be removed for any case really 
-        # qc = transpile(qc, backend=backend)
-        # print(qc.draw())
-
-        # Print the gate counts in the transpiled circuit
-        # gate counts in the transpiled circuit 
-        gate_counts = qc.count_ops()
-        print("\nGate counts in the transpiled circuit:")
-        print(gate_counts)
-        print("Circuit depth in transpiled circuit= ", qc.depth())
+        return out_qc
 
     if is_aer_backend:
         pm = generate_preset_pass_manager(
@@ -213,49 +199,127 @@ def meas_counts(
         )
         isa_circuit = pm.run(qc)
 
+        print("\n[2] FINAL AER ISA CIRCUIT")
+        print("Gate counts:")
+        print(isa_circuit.count_ops())
+        print("Final Aer depth:", isa_circuit.depth())
+
         sampler = Sampler(mode=backend)
         job = sampler.run([isa_circuit], shots=shots)
         result = job.result()
-        pub_result = result[0]
 
-        counts = result[0].data.meas.get_counts()
-        # result = backend.run(isa_circuit).result()
+        try:
+            counts = result[0].data.meas.get_counts()
+        except Exception:
+            data_keys = list(result[0].data.keys())
+            counts = getattr(result[0].data, data_keys[0]).get_counts()
+
+        print("\n[AER SHOT COUNTS]")
+        print(counts)
         return counts, isa_circuit
 
     elif backend_name in ionq_backends:
-        job = backend.run(qc, shots=shots)
+        if backend_name == "ionq_qpu":
+            qc = transpile(
+                qc,
+                basis_gates=["rx", "ry", "rz", "cx", "h", "s", "sdg", "x"],
+                optimization_level=optimization_level,
+            )
 
-        # def execute_circuit(circuit):
-        #     # Submit job to your backend
-        #     job = backend.run(circuit, shots=shots)
-        #     result = job.result()
-        #     counts = result.get_counts()
+            print("\n[2] IONQ QPU QIS-SAFE TRANSPILATION")
+            print("Gate counts:")
+            print(qc.count_ops())
+            print("Depth after IonQ QPU transpilation:", qc.depth())
 
-        #     # Optional: compute observable (example: parity or Z expectation)
-        #     # Here's a simple observable: expectation value of Z on qubit 0
-        #     z_exp = 0
-        #     for bitstring, count in counts.items():
-        #         sign = 1 if bitstring[0] == '0' else -1
-        #         z_exp += sign * count
-        #     return z_exp / shots
+        else:
+            qc = decompose_to_requested_basis(qc, label="IONQ SIMULATOR")
 
+        isa_circuit = qc
+
+        print("\n[3] FINAL IONQ SUBMITTED CIRCUIT")
+        print("Gate counts:")
+        print(isa_circuit.count_ops())
+        print("Final IonQ submitted depth:", isa_circuit.depth())
+
+        unsupported_ionq = {
+            "state_preparation",
+            "initialize",
+            "unitary",
+            "u",
+            "u3",
+        }
+        remaining = set(isa_circuit.count_ops()) & unsupported_ionq
+
+        if remaining:
+            raise ValueError(f"IonQ circuit still has unsupported gates: {remaining}")
+
+        job = backend.run(isa_circuit, shots=shots)
         counts = job.get_counts()
-        print("Shot counts after transpilation : ", job.get_counts())
-        isa_circuit = qc  # added for consistency with function return for all backends (not an actual ISA circuit, ionq doesnt have those)
+
+        print("\n[IONQ SHOT COUNTS]")
+        print(counts)
         return counts, isa_circuit
 
     elif backend_name in ibm_backends:
-        # IBM hardware / fake IBM backend path:
-        # transpile to a backend-compatible ISA circuit, then execute it directly.
-        pm = generate_preset_pass_manager(
-            backend=backend,
-            optimization_level=optimization_level,
-        )
-        isa_circuit = pm.run(qc)
+        qc = decompose_to_requested_basis(qc, label="IBM")
 
-        result = backend.run(isa_circuit, shots=shots).result()
-        counts = result.get_counts()
+        try:
+            pm = generate_preset_pass_manager(
+                backend=backend,
+                optimization_level=optimization_level,
+            )
+            isa_circuit = pm.run(qc)
 
+        except UnboundLocalError as e:
+            if "frequency" not in str(e):
+                raise
+
+            print("\nWarning: IBM backend.target conversion failed due to missing frequency.")
+            print("Using fallback transpilation with basis_gates and coupling_map.")
+
+            config = backend.configuration()
+            backend_basis_gates = getattr(config, "basis_gates", None)
+            coupling_map = getattr(config, "coupling_map", None)
+
+            isa_circuit = transpile(
+                qc,
+                basis_gates=backend_basis_gates,
+                coupling_map=coupling_map,
+                optimization_level=optimization_level,
+            )
+
+        backend_display_name = getattr(backend, "name", "unknown")
+        if callable(backend_display_name):
+            backend_display_name = backend_display_name()
+
+        print("\n[3] FINAL IBM ISA CIRCUIT")
+        print(f"Backend: {backend_display_name}")
+        print("Gate counts:")
+        print(isa_circuit.count_ops())
+        print("Final IBM hardware depth:", isa_circuit.depth())
+
+        if backend_name in {"manila", "guadalupe"}:
+            result = backend.run(isa_circuit, shots=shots).result()
+            counts = result.get_counts()
+
+            print("\n[IBM FAKE BACKEND SHOT COUNTS]")
+            print(counts)
+            return counts, isa_circuit
+
+        sampler = Sampler(mode=backend)
+        job = sampler.run([isa_circuit], shots=shots)
+        result = job.result()
+
+        pub_result = result[0]
+
+        try:
+            counts = pub_result.data.meas.get_counts()
+        except Exception:
+            data_keys = list(pub_result.data.keys())
+            counts = getattr(pub_result.data, data_keys[0]).get_counts()
+
+        print("\n[IBM HARDWARE SHOT COUNTS]")
+        print(counts)
         return counts, isa_circuit
 
     else:
