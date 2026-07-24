@@ -118,7 +118,7 @@ def meas_counts(
             print("Depth after basic QIS transpilation:", out_qc.depth())
             return out_qc
 
-        if "ms" in basis_gates:
+        if backend_name in {"ionq_simulator", "ionq_noisy_sim"} and "ms" in basis_gates:
             raise ValueError(
                 "basis_gates contains 'ms'. This function does not support "
                 "IonQ native MS submission. Use ionq_simulator/noisy_sim with RXX "
