@@ -2,19 +2,19 @@
 from qiskit import transpile
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit_ibm_runtime import SamplerV2 as Sampler
-from qiskit.converters import circuit_to_dag
-from qiskit.circuit.library import ECRGate, IGate, RZGate, SXGate, XGate, CXGate
-from qiskit import transpile 
 from qiskit.circuit import QuantumCircuit
-from qiskit.quantum_info import Operator
-from qiskit.synthesis import TwoQubitBasisDecomposer
 from evolve import add_measurement_to_circuit
 from qiskit.quantum_info import Statevector,DensityMatrix
 import numpy as np
 from qiskit_aer.noise import NoiseModel
 from qiskit_ibm_runtime.fake_provider import FakeManilaV2
 from qiskit_ibm_runtime import QiskitRuntimeService
-from qiskit.circuit.library import RXXGate
+
+# Abstract ("QIS") gate set handed to the IonQ cloud compiler. IonQ is all-to-all,
+# so there is no coupling map to route against; we lower to a generic basis and let
+# IonQ's own compiler convert to native gates. This also synthesizes the JJ/BJ
+# UnitaryGates into cx + single-qubit rotations so nothing 'unitary' is submitted.
+_QIS_BASIS = ["rx", "ry", "rz", "cx", "h", "s", "sdg", "x"]
 
 def get_direct_state(qc_base, backend, optimization_level):
     """
@@ -82,6 +82,12 @@ def meas_counts(
     euler_basis=None,
     basis_gates=None,
 ):
+    # two_qubit_gate / euler_basis / basis_gates are accepted for call-signature
+    # compatibility with the test notebooks but are no longer used: the JJ/BJ terms
+    # are emitted as UnitaryGates (see evolve.py) and the transpiler's built-in
+    # UnitarySynthesis pass lowers them to each backend's native two-qubit gate. The
+    # old manual TwoQubitBasisDecomposer step this triggered is gone. (Removing these
+    # params from the notebook call chain is a separate cleanup.)
     qc = add_measurement_to_circuit(qc_base, N_sites, measure=measure)
 
     print(f"\n{'=' * 70}")
@@ -105,105 +111,62 @@ def meas_counts(
         backend_name_attr is not None and "aer" in backend_name_attr.lower()
     )
 
-    def decompose_to_requested_basis(input_qc, label):
-        if two_qubit_gate is None or euler_basis is None or basis_gates is None:
-            print(f"\n[2] BASIC QIS TRANSPILATION FOR {label}")
-            out_qc = transpile(
+    def to_isa(input_qc):
+        """
+        Lower input_qc to an executable ("ISA") circuit for the selected backend.
+
+        IonQ: transpile to the abstract _QIS_BASIS and let IonQ's cloud compiler do
+        native conversion (all-to-all, so no routing here). Aer / IBM: a
+        backend-targeted preset pass manager, which both synthesizes the JJ/BJ
+        UnitaryGates and routes/maps to the device topology.
+        """
+        if backend_name in ionq_backends:
+            return transpile(
                 input_qc,
-                basis_gates=["rx", "ry", "rz", "cx", "h", "s", "sdg", "x"],
+                basis_gates=_QIS_BASIS,
                 optimization_level=optimization_level,
             )
-            print("Gate counts:")
-            print(out_qc.count_ops())
-            print("Depth after basic QIS transpilation:", out_qc.depth())
-            return out_qc
 
-        if backend_name in {"ionq_simulator", "ionq_noisy_sim"} and "ms" in basis_gates:
-            raise ValueError(
-                "basis_gates contains 'ms'. This function does not support "
-                "IonQ native MS submission. Use ionq_simulator/noisy_sim with RXX "
-                "or build a separate native-gate circuit."
-            )
+        if is_aer_backend or backend_name in ibm_backends:
+            try:
+                pm = generate_preset_pass_manager(
+                    backend=backend,
+                    optimization_level=optimization_level,
+                )
+                return pm.run(input_qc)
 
-        gate_map = {
-            "ECR": ECRGate(),
-            "CX": CXGate(),
-            "RXX": RXXGate(np.pi / 2),
-        }
+            except UnboundLocalError as e:
+                # Some IBM targets fail target-conversion on a missing frequency;
+                # fall back to explicit basis_gates + coupling_map from the config.
+                if "frequency" not in str(e):
+                    raise
 
-        if two_qubit_gate not in gate_map:
-            raise ValueError(
-                f"Unsupported two_qubit_gate={two_qubit_gate}. "
-                f"Allowed values are {list(gate_map.keys())}."
-            )
-        # decomposes all the 2 qubit gates in the circuit for 1 time step and optimizes all those 2-qubit gates as a whole for each time step. 
+                print("\nWarning: IBM backend.target conversion failed due to missing frequency.")
+                print("Using fallback transpilation with basis_gates and coupling_map.")
 
-        # Decompose two-qubit gates using KAK decomposition
-        # Gate	Use Case (Two-qubit gate to be used in the KAK decomposition):
-        # CXGate()	Standard choice for IBM Quantum devices (most universal).
-        # ECRGate()	More optimized for IBM devices that natively support Echoed Cross Resonance.
-        # iSwapGate()	Used in other superconducting architectures (e.g., Google Sycamore).
-        # RXXGate()	Needed when simulating parametric two-qubit interactions.
-        # Available Euler Bases in Qiskit: Valid options are ['ZYZ', 'ZXZ', 'XYX', 'U', 'U3', 'U1X', 'PSX', 'ZSX', 'RR'].
-        # 'U3'	Uses the U3 gate decomposition (IBM's standard, equivalent to any single-qubit unitary).
-        # 'ZYZ'	Uses RZ-RY-RZ decomposition, commonly used in quantum computing.
-        # 'ZXZ'	Uses RZ-RX-RZ decomposition, less common but useful in some applications.
-        # 'XYX'	Uses RX-RY-RX decomposition, an alternative single-qubit Euler representation
+                config = backend.configuration()
+                return transpile(
+                    input_qc,
+                    basis_gates=getattr(config, "basis_gates", None),
+                    coupling_map=getattr(config, "coupling_map", None),
+                    optimization_level=optimization_level,
+                )
 
-        # Decompose two-qubit gates using the Euler basis and two-qubit gate
-        # selected in initialize_parameters() for the chosen backend.
-
-        decomposer = TwoQubitBasisDecomposer(
-            gate_map[two_qubit_gate],
-            euler_basis=euler_basis,
+        raise ValueError(
+            f"Unsupported backend_name={backend_name}. "
+            "Expected IBM, IonQ, or Aer backend."
         )
 
-        # Create a new quantum circuit to hold the decomposed gates
-        new_qc = QuantumCircuit(*input_qc.qregs, *input_qc.cregs)
+    # Common lowering step for every backend: produce the ISA circuit once, then
+    # branch below only on how to *execute* it.
+    isa_circuit = to_isa(qc)
 
-        for inst in input_qc.data:
-            gate = inst.operation
-            qargs = inst.qubits
-            cargs = inst.clbits
-
-            new_qargs = [new_qc.qubits[input_qc.find_bit(q).index] for q in qargs]
-            new_cargs = [new_qc.clbits[input_qc.find_bit(c).index] for c in cargs]
-
-            if gate.num_qubits == 2:
-                unitary_matrix = Operator(gate).data
-                decomposed_circuit = decomposer(unitary_matrix)
-                new_qc.append(decomposed_circuit.to_instruction(), new_qargs, [])
-            else:
-                new_qc.append(gate, new_qargs, new_cargs)
-
-        out_qc = transpile(
-            new_qc,
-            basis_gates=basis_gates,
-            optimization_level=optimization_level,
-        )
-
-        print(f"\n[2] AFTER CUSTOM BASIS TRANSPILATION FOR {label}")
-        print(f"two_qubit_gate = {two_qubit_gate}")
-        print(f"euler_basis    = {euler_basis}")
-        print(f"basis_gates    = {basis_gates}")
-        print("Gate counts:")
-        print(out_qc.count_ops())
-        print("Depth after custom basis transpilation:", out_qc.depth())
-
-        return out_qc
+    print("\n[2] FINAL ISA CIRCUIT")
+    print("Gate counts:")
+    print(isa_circuit.count_ops())
+    print("Final depth:", isa_circuit.depth())
 
     if is_aer_backend:
-        pm = generate_preset_pass_manager(
-            backend=backend,
-            optimization_level=optimization_level,
-        )
-        isa_circuit = pm.run(qc)
-
-        print("\n[2] FINAL AER ISA CIRCUIT")
-        print("Gate counts:")
-        print(isa_circuit.count_ops())
-        print("Final Aer depth:", isa_circuit.depth())
-
         sampler = Sampler(mode=backend)
         job = sampler.run([isa_circuit], shots=shots)
         result = job.result()
@@ -219,28 +182,8 @@ def meas_counts(
         return counts, isa_circuit
 
     elif backend_name in ionq_backends:
-        if backend_name == "ionq_qpu":
-            qc = transpile(
-                qc,
-                basis_gates=["rx", "ry", "rz", "cx", "h", "s", "sdg", "x"],
-                optimization_level=optimization_level,
-            )
-
-            print("\n[2] IONQ QPU QIS-SAFE TRANSPILATION")
-            print("Gate counts:")
-            print(qc.count_ops())
-            print("Depth after IonQ QPU transpilation:", qc.depth())
-
-        else:
-            qc = decompose_to_requested_basis(qc, label="IONQ SIMULATOR")
-
-        isa_circuit = qc
-
-        print("\n[3] FINAL IONQ SUBMITTED CIRCUIT")
-        print("Gate counts:")
-        print(isa_circuit.count_ops())
-        print("Final IonQ submitted depth:", isa_circuit.depth())
-
+        # IonQ rejects high-level / opaque gates; the abstract-basis transpile above
+        # must have lowered everything. Fail loudly if any survived.
         unsupported_ionq = {
             "state_preparation",
             "initialize",
@@ -261,42 +204,10 @@ def meas_counts(
         return counts, isa_circuit
 
     elif backend_name in ibm_backends:
-        qc = decompose_to_requested_basis(qc, label="IBM")
-
-        try:
-            pm = generate_preset_pass_manager(
-                backend=backend,
-                optimization_level=optimization_level,
-            )
-            isa_circuit = pm.run(qc)
-
-        except UnboundLocalError as e:
-            if "frequency" not in str(e):
-                raise
-
-            print("\nWarning: IBM backend.target conversion failed due to missing frequency.")
-            print("Using fallback transpilation with basis_gates and coupling_map.")
-
-            config = backend.configuration()
-            backend_basis_gates = getattr(config, "basis_gates", None)
-            coupling_map = getattr(config, "coupling_map", None)
-
-            isa_circuit = transpile(
-                qc,
-                basis_gates=backend_basis_gates,
-                coupling_map=coupling_map,
-                optimization_level=optimization_level,
-            )
-
         backend_display_name = getattr(backend, "name", "unknown")
         if callable(backend_display_name):
             backend_display_name = backend_display_name()
-
-        print("\n[3] FINAL IBM ISA CIRCUIT")
         print(f"Backend: {backend_display_name}")
-        print("Gate counts:")
-        print(isa_circuit.count_ops())
-        print("Final IBM hardware depth:", isa_circuit.depth())
 
         if backend_name in {"manila", "guadalupe"}:
             result = backend.run(isa_circuit, shots=shots).result()
