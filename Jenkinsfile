@@ -26,7 +26,7 @@ pipeline {
 	//=======//
 	stage('Only Vacuum oscillations'){ steps {
                 // Convert the notebook to a Python script
-                sh 'jupyter nbconvert --to script tests/main_vac_osc.ipynb'
+                //sh 'jupyter nbconvert --to script tests/main_vac_osc.ipynb'
                 // Run the converted Python script
                 sh 'python tests/main_vac_osc.py'
 				sh 'find . -name "*.pdf"'
@@ -35,7 +35,7 @@ pipeline {
 } 
 
 	stage('Rogerro(2021) full Hamiltonian'){ steps{
-		sh 'jupyter nbconvert --to script tests/main_Rog.ipynb'
+		//sh 'jupyter nbconvert --to script tests/main_Rog.ipynb'
 		sh 'python tests/main_Rog.py'
         sh 'find . -name "*.pdf"'
         archiveArtifacts artifacts: '**/*.pdf'
@@ -43,7 +43,7 @@ pipeline {
     } 
 }
 	stage('Richers(2021) MF Homogenous QC_FFI'){ steps{
-		sh 'jupyter nbconvert --to script tests/Homogenous_FFI_Richers.ipynb'
+		//sh 'jupyter nbconvert --to script tests/Homogenous_FFI_Richers.ipynb'
 		sh 'python tests/Homogenous_FFI_Richers.py'
         sh 'find . -name "*.pdf"'
         archiveArtifacts artifacts: '**/*.pdf'
@@ -52,7 +52,7 @@ pipeline {
     } 
 }
 	stage('Richers(2021) MF Inomogenous QC_FFI'){ steps{
-		sh 'jupyter nbconvert --to script tests/Inhomogenous_FFI_Richers.ipynb'
+		//sh 'jupyter nbconvert --to script tests/Inhomogenous_FFI_Richers.ipynb'
 		sh 'python tests/Inhomogenous_FFI_Richers.py'
         sh 'find . -name "*.pdf"'
         archiveArtifacts artifacts: '**/*.pdf'
@@ -60,7 +60,7 @@ pipeline {
     } 
 }
 	stage('Josh Homogenous depolarization noise'){ steps{
-		sh 'jupyter nbconvert --to script tests/Homo_Josh_noise_depolarization.ipynb'
+		//sh 'jupyter nbconvert --to script tests/Homo_Josh_noise_depolarization.ipynb'
 		sh 'python tests/Homo_Josh_noise_depolarization.py'
 		sh 'find . -name "*.pdf"'
 		archiveArtifacts artifacts: '**/*.pdf'
