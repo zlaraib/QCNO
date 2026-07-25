@@ -1,6 +1,12 @@
 import numpy as np
 
-def calc_mean_and_sigma(counts, shots, N_sites, df=0):
+def calc_mean_and_sigma(counts, params):
+    # params is the run-parameter dict (see initialize_parameters in the tests).
+    # Only N_sites and df are used; the former `shots` argument was never read in the
+    # body, so it is gone.
+    N_sites = params["N_sites"]
+    df = params["df"]
+
     # Initialize lists to store the mean and standard deviation for each qubit
     mean_values = []
     std_values = []

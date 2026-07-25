@@ -107,28 +107,21 @@ def get_direct_state(qc_base, backend, optimization_level):
 # The goal is to ensure compatibility across all backends while using
 # the most appropriate execution method for each.
 
-def meas_counts(
-    qc_base,
-    measure,
-    N_sites,
-    backend,
-    backend_name,
-    optimization_level,
-    shots,
-    two_qubit_gate=None,
-    euler_basis=None,
-    basis_gates=None,
-    iteration=None,
-):
-    # two_qubit_gate / euler_basis / basis_gates are accepted for call-signature
-    # compatibility with the test notebooks but are no longer used: the JJ/BJ terms
-    # are emitted as UnitaryGates (see evolve.py) and the transpiler's built-in
-    # UnitarySynthesis pass lowers them to each backend's native two-qubit gate. The
-    # old manual TwoQubitBasisDecomposer step this triggered is gone. (Removing these
-    # params from the notebook call chain is a separate cleanup.)
+def meas_counts(qc_base, measure, params, iteration=None):
+    # params is the run-parameter dict (see initialize_parameters in the tests). Only
+    # the execution-relevant keys are read here. The former two_qubit_gate /
+    # euler_basis / basis_gates arguments are gone: the JJ/BJ terms are emitted as
+    # UnitaryGates (see evolve.py) and the transpiler's built-in UnitarySynthesis pass
+    # lowers them to each backend's native two-qubit gate, so those values were dead.
     #
     # iteration only labels the row this call writes to the circuit-size log; pass the
     # timestep index once it is threaded down from the callers (blank until then).
+    N_sites = params["N_sites"]
+    backend = params["backend"]
+    backend_name = params["backend_name"]
+    optimization_level = params["optimization_level"]
+    shots = params["shots"]
+
     qc = add_measurement_to_circuit(qc_base, N_sites, measure=measure)
 
     ibm_backends = {"manila", "ibm", "guadalupe"}

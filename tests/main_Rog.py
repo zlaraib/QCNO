@@ -202,14 +202,8 @@ def record_step(state, params, datadir):
     # -------------------------------
     # Measurement-based sigma_z from counts
     # -------------------------------
-    counts_z, _ = meas_counts(
-        qc_base, 'Z', params["N_sites"], params["backend"], params["backend_name"],
-        params["optimization_level"], params["shots"], params["two_qubit_gate"],
-        params["euler_basis"], params["basis_gates"]
-    )
-    sigma_z_sorted, _ = calc_mean_and_sigma(
-        counts_z, params["shots"], params["N_sites"], df=params["df"]
-    )
+    counts_z, _ = meas_counts(qc_base, 'Z', params)
+    sigma_z_sorted, _ = calc_mean_and_sigma(counts_z, params)
     sigma_z_sorted = np.asarray(sigma_z_sorted)[::-1]
 
     sigma_z_original = reorder_sorted_to_original(sigma_z_sorted, particle_ids)
