@@ -73,6 +73,14 @@ def reset_observable_files(params, datadir):
         reset_file(_sigma_path(datadir, basis))
 
 
+def print_progress_header(params):
+    """Print the column header for the per-step progress table that
+    record_observables writes to stdout: iteration, trotter_steps, t, then one
+    site-averaged <sigma_b> column per basis in params["measure"]."""
+    labels = "".join(f"{'<sigma_' + b.lower() + '>':>13}" for b in params["measure"])
+    print(f"{'iter':>6}{'trotter':>9}{'t':>15}{labels}")
+
+
 def record_observables(state, params, datadir):
     """
     Standardized per-step measurement and output. Replaces the per-test
@@ -106,6 +114,14 @@ def record_observables(state, params, datadir):
     }
     for basis, sig in sigmas.items():
         append_row(_sigma_path(datadir, basis), t, sig)
+
+    # Basic per-step progress row (see print_progress_header for the columns):
+    # iteration, cumulative trotter steps applied so far, t, then the domain
+    # (site) average of each measured sigma. Recording happens before the step is
+    # advanced, so iteration k has had k full timesteps applied.
+    trotter_total = state["step_idx"] * params["trotter_steps"]
+    means = "".join(f"{np.mean(sigmas[basis]):>+13.4f}" for basis in params["measure"])
+    print(f"{state['step_idx']:>6}{trotter_total:>9}{t:>15.6e}{means}")
 
 
 def run_time_evolution(params, datadir):
@@ -188,6 +204,8 @@ def run_time_evolution(params, datadir):
 
     # start the per-step observable files empty too
     reset_observable_files(params, datadir)
+
+    print_progress_header(params)
 
     for step_idx, t in enumerate(times):
         # -------------------------------
