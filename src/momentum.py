@@ -1,5 +1,23 @@
 import numpy as np
 
+
+def vacuum_frequency(delta_m_squared, p, energy_sign):
+    """Per-site vacuum oscillation frequency omega = Δm² / (2|p|) * energy_sign.
+
+    Inputs:
+    - delta_m_squared: mass-squared difference. Sign/zero conventions are carried
+      by the caller through delta_m_squared and energy_sign (e.g. negate
+      energy_sign to flip the sign; set delta_m_squared = 0 to disable).
+    - p: (N_sites, 3) momentum array.
+    - energy_sign: per-site sign (+/-1), one per site.
+
+    Output:
+    - omega: (N_sites,) array of vacuum oscillation frequencies.
+    """
+    p_mod = np.linalg.norm(p, axis=1)
+    return (delta_m_squared / (2.0 * p_mod)) * np.asarray(energy_sign)
+
+
 def momentum(p, N_sites):
     p_hat = []  # Initialize an empty list to collect p_i_hat vectors. This list will contain unit vectors of all sites in all directions
     p_mod = []  # Initialize list that contains the modulus of all sites

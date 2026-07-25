@@ -57,12 +57,15 @@ from hamiltonian import construct_hamiltonian
 from momentum import momentum
 from meas_counts import get_direct_state, meas_counts
 from base_circuit import initialize_base_circuit
-from run_parameters import write_run_parameters
 from sigma_statistics import calc_mean_and_sigma
 from constants import hbar, c , eV, MeV, GeV, G_F, kB
 from evolve import apply_one_timestep_dynamic_positions, apply_qubit_permutation
 from perturb import pert_circuit
 from activate_backend import activate_backends, build_backend, backend_supports_direct_state
+from time_evolution import (
+    run_time_evolution, reorder_sorted_to_original,
+    append_row, append_scalar_row, reset_file,
+)
 
 
 # In[ ]:
@@ -136,231 +139,139 @@ def find_first_local_minima_index(arr):
 
 # In[ ]:
 
+# =========================
+# Constant inputs (independent of N_sites / delta_omega)
+# =========================
+params = {}
+params["shots"] = 10420
+params["trotter_steps"] = 5  # try comparing for larger trotter steps
+params["optimization_level"] = 0
 
-def initialize_parameters(N_sites, delta_omega, ibm_service, ionq_provider):
-    delta_m_squared = float(delta_omega)
+backend_options = dict(
+    method="matrix_product_state",
+    matrix_product_state_max_bond_dimension=10000000,
+    matrix_product_state_truncation_threshold=1e-16,
+    mps_sample_measure_algorithm="mps_apply_measure",
+)
+backend, euler_basis, basis_gates, two_qubit_gate = build_backend(
+    backend_name, ibm_service, ionq_provider, backend_options=backend_options,
+)
+params["backend"] = backend
+params["backend_name"] = backend_name
+params["euler_basis"] = euler_basis
+params["basis_gates"] = basis_gates
+params["two_qubit_gate"] = two_qubit_gate
+params["trotter_order"] = trotter_order
 
-    shots = 10420
-    trotter_steps = 5  #try comparing for larger trotter steps 
-    optimization_level = 0
+params["tolerance"] = 5e-1
+params["df"] = 1
+params["tau"] = 0.05 * hbar
+params["ttotal"] = 5.0 * hbar
+params["times"] = np.arange(0.0, params["ttotal"] + params["tau"], params["tau"])
 
-    backend_options = dict(
-        method="matrix_product_state",
-        matrix_product_state_max_bond_dimension=10000000,
-        matrix_product_state_truncation_threshold=1e-16,
-        mps_sample_measure_algorithm="mps_apply_measure",
-    )
-    backend, euler_basis, basis_gates, two_qubit_gate = build_backend(
-        backend_name, ibm_service, ionq_provider, backend_options=backend_options,
-    )
+params["dx"] = 1e-3
+params["L"] = 1.0
+params["dp"] = params["L"]
 
-    tolerance = 5e-1
-    df = 1
-    τ = 0.05 * hbar
-    ttotal = 5.0 * hbar
-    times = np.arange(0.0, ttotal + τ, τ)
+params["theta_nu"] = 0.0
+params["shape_name"] = "none"
+params["geometric_name"] = "none"
+params["periodic"] = False
+params["alpha"] = 0.0
+params["B_pert"] = None
+params["advection"] = False  # True/False
 
-    Δx = 1e-3
-    L = 1.0
-    Δp = L
+# Match Julia create_gates B = [sin(2θ), 0, -cos(2θ)].
+B = np.array([np.sin(2 * params["theta_nu"]), 0.0, -np.cos(2 * params["theta_nu"])], dtype=float)
+params["B"] = B / np.linalg.norm(B)
 
-    theta_nu = 0.0
-    shape_name = "none"
-    geometric_name = "none"
-    periodic = False
-    alpha = 0.0
-    B_pert = None
+
+def initialize_parameters(N_sites, delta_omega):
+    """Fill in the parameters that depend on N_sites / delta_omega.
+
+    The constant inputs are set once above; this updates the global params dict
+    with the per-case values and returns it.
+    """
+    params["N_sites"] = N_sites
+    params["delta_omega"] = delta_omega
+    params["delta_m_squared"] = float(delta_omega)
 
     mu = np.ones(N_sites, dtype=float)
-    N = mu * ((Δx ** 3) / (np.sqrt(2.0) * G_F * N_sites))
+    params["N"] = mu * ((params["dx"] ** 3) / (np.sqrt(2.0) * G_F * N_sites))
 
-    x = np.zeros(N_sites, dtype=float)
+    params["x"] = np.zeros(N_sites, dtype=float)
 
     px_a = np.full(N_sites // 2, 0.5, dtype=float)
     px_b = np.full(N_sites // 2, 0.5, dtype=float)
     px = np.concatenate((px_a, px_b))
     p = np.column_stack((px, np.zeros(N_sites), np.zeros(N_sites)))
+    params["p"] = p
 
-    # Roggero Julia convention: first half +1, second half -1.
-    energy_sign = np.array(
+    # Roggero Julia convention: first half +1, second half -1. Negated so the
+    # shared omega = Δm²/(2|p|)*energy_sign reproduces the Roggero sign
+    # (originally omega carried an explicit leading minus).
+    params["energy_sign"] = -np.array(
         [1 if i < N_sites // 2 else -1 for i in range(N_sites)],
         dtype=int,
     )
 
-    # Match Julia create_gates:
-    # omega[i] = (Δm² / (2 * |p_i|)) * energy_sign[i]
-    p_mod = np.linalg.norm(p, axis=1)
-    omega = np.where(
-        p_mod != 0.0,
-        -(delta_m_squared / (2.0 * p_mod)) * energy_sign.astype(float),
-        0.0,
-    )
-
-    # Match Julia create_gates B = [sin(2θ), 0, -cos(2θ)].
-    B = np.array([np.sin(2 * theta_nu), 0.0, -np.cos(2 * theta_nu)], dtype=float)
-    B = B / np.linalg.norm(B)
-
     # Match Julia productMPS(s, N -> N <= N/2 ? "Dn" : "Up")
-    bit_list = ['1' if i < N_sites // 2 else '0' for i in range(N_sites)]
-    advection = False #True/False
-    return (
-        N_sites, theta_nu, geometric_name, bit_list, omega, B, B_pert, alpha, N,
-        x, p, energy_sign, Δx, Δp, L, delta_m_squared, shape_name, shots,
-        trotter_steps, backend, backend_name, tolerance, df, τ, times, ttotal,
-        optimization_level, periodic, two_qubit_gate, euler_basis, basis_gates,
-        advection
+    params["bit_list"] = ['1' if i < N_sites // 2 else '0' for i in range(N_sites)]
+
+    return params
+
+def record_step(state, params, datadir):
+    """Per-timestep sigma_z measurement and output for main_Rog.
+
+    Called by run_time_evolution. Reads its measurement config from `params` and
+    writes sigma_z / -sigma_z1 into `datadir`; main() reads those files back for
+    the post-loop fit. Positions/momenta are recorded by the driver, not here.
+    """
+    t = state["t"]
+    qc_base = state["qc_base"]
+    particle_ids = state["particle_ids"]
+
+    # -------------------------------
+    # Measurement-based sigma_z from counts
+    # -------------------------------
+    counts_z, _ = meas_counts(
+        qc_base, 'Z', params["N_sites"], params["backend"], params["backend_name"],
+        params["optimization_level"], params["shots"], params["two_qubit_gate"],
+        params["euler_basis"], params["basis_gates"]
     )
+    sigma_z_sorted, _ = calc_mean_and_sigma(
+        counts_z, params["shots"], 'Z', params["N_sites"], df=params["df"]
+    )
+    sigma_z_sorted = np.asarray(sigma_z_sorted)[::-1]
+
+    sigma_z_original = reorder_sorted_to_original(sigma_z_sorted, particle_ids)
+
+    print(f"iteration={state['step_idx']} t={t} sigma_z(original order) = {sigma_z_original}")
+
+    append_row(os.path.join(datadir, "t_sigma_z.dat"), t, sigma_z_original)
+    append_scalar_row(os.path.join(datadir, "minus_sigma_z1.dat"), t, -float(sigma_z_original[0]))
 
 
+def run_single_config(N_sites, delta_omega):
+    params = initialize_parameters(N_sites, delta_omega)
 
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-def simulate(
-    times, omega, energy_sign, x, Δp, L, shape_name, N_sites, theta_nu,
-    geometric_name, bit_list, backend, backend_name, shots, τ, df, ttotal,
-    optimization_level, N, B, B_pert, alpha, Δx, p, tolerance,
-    trotter_steps, trotter_order, periodic, delta_omega,
-    two_qubit_gate, euler_basis, basis_gates,advection
-):
-    # record the exact inputs of this run before anything mutates them
-    import inspect as _inspect
-    _av = _inspect.getargvalues(_inspect.currentframe())
-    write_run_parameters("datafiles/run_parameters.json", {n: _av.locals[n] for n in _av.args})
-    import os
-    import numpy as np
-    from scipy.interpolate import UnivariateSpline
-
-    datadir = os.path.join(os.getcwd(), "datafiles")
+    # each Roggero case gets its own datafiles subfolder
+    case_tag = f"N{N_sites}_dw{safe_float_string(delta_omega)}"
+    datadir = os.path.join(os.getcwd(), "datafiles", case_tag)
     os.makedirs(datadir, exist_ok=True)
 
-    sigma_z1_values = []
-    sigma_z_values = []
-    x_values = []
-    px_values = []
+    sz_path = os.path.join(datadir, "t_sigma_z.dat")
+    reset_file(sz_path)
+    reset_file(os.path.join(datadir, "minus_sigma_z1.dat"))
 
-    def reorder_sorted_to_original(data_sorted, particle_ids):
-        data_sorted = np.asarray(data_sorted)
-        data_original = np.empty_like(data_sorted)
-        for sorted_slot, pid in enumerate(particle_ids):
-            data_original[pid] = data_sorted[sorted_slot]
-        return data_original
+    run_time_evolution(params, datadir, record_step)
 
-    def write_row(fhandle, t, values):
-        row = np.concatenate(([t], np.asarray(values, dtype=float).ravel()))
-        np.savetxt(fhandle, row[None, :], fmt="%.16e")
+    # read sigma_z back from file for the post-loop fit
+    times = np.asarray(params["times"], dtype=float)
+    τ = params["tau"]
+    tolerance = params["tolerance"]
 
-    particle_ids = np.arange(N_sites)
-
-    # initial sort
-    perm0 = np.argsort(x)
-    x = np.asarray(x)[perm0].copy()
-    p = np.asarray(p)[perm0].copy()
-    N = np.asarray(N)[perm0].copy()
-    omega = np.asarray(omega)[perm0].copy()
-    energy_sign = np.asarray(energy_sign)[perm0].copy()
-    particle_ids = particle_ids[perm0].copy()
-    bit_list = np.asarray(bit_list)[perm0].tolist()
-    print("initial sorted bit_list =", bit_list)
-    print("initial energy_sign =", energy_sign)
-
-    qc_base = initialize_base_circuit(
-        n_qubits=N_sites,
-        bit_list_sorted=bit_list,
-        B_pert=B_pert,
-        alpha=alpha
-    )
-    direct_ok = backend_supports_direct_state(backend)
-
-    isa_circuit_z = None
-    isa_circuit_z_first = None
-
-    case_tag = f"N{N_sites}_dw{safe_float_string(delta_omega)}"
-
-    # open files once
-    file_handles = {
-        "x": open(os.path.join(datadir, f"t_xsiteval_{case_tag}.dat"), "w"),
-        "px": open(os.path.join(datadir, f"t_pxsiteval_{case_tag}.dat"), "w"),
-        "sz": open(os.path.join(datadir, f"t_sigma_z_{case_tag}.dat"), "w"),
-        "minus_sz1": open(os.path.join(datadir, f"minus_sigma_z1_{case_tag}.dat"), "w"),
-    }
-
-    try:
-        for step_idx, t in enumerate(times):
-            print(f"\niteration={step_idx}, time={t}")
-
-            # -------------------------------
-            # Store x and px in original order
-            # -------------------------------
-            x_original = reorder_sorted_to_original(x, particle_ids)
-            px_original = reorder_sorted_to_original(p[:, 0], particle_ids)
-
-            x_values.append(x_original.copy())
-            px_values.append(px_original.copy())
-
-            write_row(file_handles["x"], t, x_original)
-            write_row(file_handles["px"], t, px_original)
-
-            # -------------------------------
-            # 1) Measurement-based sigma_z from counts
-            # -------------------------------
-            counts_z, isa_circuit_z = meas_counts(
-                qc_base, 'Z', N_sites, backend, backend_name, optimization_level,
-                shots, two_qubit_gate, euler_basis, basis_gates
-            )
-            sigma_z_sorted, _ = calc_mean_and_sigma(counts_z, shots, 'Z', N_sites, df=df)
-            sigma_z_sorted = np.asarray(sigma_z_sorted)[::-1]
-
-            if np.isclose(t, τ, rtol=0.0, atol=1e-15):
-                isa_circuit_z_first = isa_circuit_z
-            sigma_z_original = reorder_sorted_to_original(sigma_z_sorted, particle_ids)
-            sigma_z_values.append(sigma_z_original.copy())
-
-            print(f"t={t} sigma_z(original order) = {sigma_z_original}")
-
-            write_row(file_handles["sz"], t, sigma_z_original)
-
-            minus_sigma_z1_now = -float(sigma_z_original[0])
-            np.savetxt(
-                file_handles["minus_sz1"],
-                np.array([[t, minus_sigma_z1_now]]),
-                fmt="%.16e"
-            )
-
-            # force write during evolution
-            for fh in file_handles.values():
-                fh.flush()
-
-            # stop after storing last point
-            if step_idx == len(times) - 1:
-                break
-
-            qc_base, N, x, p, omega, particle_ids, energy_sign = apply_one_timestep_dynamic_positions(
-                qc_base,
-                τ,
-                N, x, Δp, L, shape_name, omega, B,
-                N_sites, Δx, p, geometric_name,
-                trotter_steps, trotter_order, periodic,
-                particle_ids,
-                energy_sign,
-                advection,
-            )
-
-    finally:
-        for fh in file_handles.values():
-            fh.close()
-
-    # convert to arrays
-    times = np.asarray(times, dtype=float)
-    x_values = np.asarray(x_values, dtype=float)
-    px_values = np.asarray(px_values, dtype=float)
-
-    sigma_z_values = np.asarray(sigma_z_values, dtype=float)
+    sigma_z_values = np.atleast_2d(np.loadtxt(sz_path))[:, 1:]  # drop leading time column
     print(f"sigma_z_values = {sigma_z_values}")
 
     sigma_z1_values = sigma_z_values[:, 0]   # first column = site 1 over all times
@@ -395,29 +306,14 @@ def simulate(
         assert abs(t_min / hbar - t_p_Rog) < (τ / hbar) + tolerance, (
             "The time of the first minimum survival probability is not within the expected range."
         )
+        print("Test passed.")
 
-    return (
-        sigma_z1_values,
-        sigma_z_values,
-        t_min,
-        t_p_Rog,
-        i_first_local_min,
-        isa_circuit_z_first,
-    )
-
-
-# In[ ]:
-
-
-def plot_results(times, shots, sigma_z1_values, N_sites, ttotal, t_min, t_p_Rog, i_first_local_min, delta_omega):
-    plotdir = os.path.join(
-        os.getcwd(), "plots"
-    )
+    # ---- plot ----
+    plotdir = os.path.join(os.getcwd(), "plots")
     os.makedirs(plotdir, exist_ok=True)
 
-    times_over_hbar = np.asarray(times) / hbar
+    times_over_hbar = times / hbar
     t_min_over_hbar = None if t_min is None else t_min / hbar
-    minus_sigma_z1 = -np.asarray(sigma_z1_values)   # raw curve for plotting
 
     plt.figure(figsize=(8, 6))
     plt.plot(times_over_hbar, minus_sigma_z1, label=f"My_plot_for_N_sites{N_sites}")
@@ -452,91 +348,12 @@ def plot_results(times, shots, sigma_z1_values, N_sites, ttotal, t_min, t_p_Rog,
 
     plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
     plt.grid(True)
-    case_tag = f"N{N_sites}_dw{safe_float_string(delta_omega)}"
-    plt.savefig(
-        os.path.join(plotdir, f"main_Rog_{case_tag}.pdf")
-    )
+    plt.savefig(os.path.join(plotdir, f"main_Rog_{case_tag}.pdf"))
     plt.show()
 
-
-
-# In[ ]:
-
-
-def main(N_sites, delta_omega):
-    case_tag = f"N{N_sites}_dw{safe_float_string(delta_omega)}"
-    (
-        N_sites, theta_nu, geometric_name, bit_list, omega, B, B_pert, alpha, N,
-        x, p, energy_sign, Δx, Δp, L, delta_m_squared, shape_name, shots,
-        trotter_steps, backend, backend_name, tolerance, df, τ, times, ttotal,
-        optimization_level, periodic,
-        two_qubit_gate, euler_basis, basis_gates,advection
-    ) = initialize_parameters(N_sites, delta_omega, ibm_service, ionq_provider)
-
-    (
-        sigma_z1_values,
-        sigma_z_values,
-        t_min,
-        t_p_Rog,
-        i_first_local_min,
-        circuit
-    ) = simulate(
-        times=times,
-        omega=omega,
-        energy_sign=energy_sign,
-        x=x,
-        Δp=Δp,
-        L=L,
-        shape_name=shape_name,
-        N_sites=N_sites,
-        theta_nu=theta_nu,
-        geometric_name=geometric_name,
-        bit_list=bit_list,
-        backend=backend,
-        backend_name=backend_name,
-        shots=shots,
-        τ=τ,
-        df=df,
-        ttotal=ttotal,
-        optimization_level=optimization_level,
-        N=N,
-        B=B,
-        B_pert=B_pert,
-        alpha=alpha,
-        Δx=Δx,
-        p=p,
-        tolerance=tolerance,
-        trotter_steps=trotter_steps,
-        trotter_order=trotter_order,
-        periodic=periodic,
-        delta_omega=delta_omega,
-        two_qubit_gate=two_qubit_gate,
-        euler_basis=euler_basis,
-        basis_gates=basis_gates,
-        advection=advection,
-        
-    )
-
-    plot_results(
-        times=times,
-        shots=shots,
-        sigma_z1_values=sigma_z1_values,
-        N_sites=N_sites,
-        ttotal=ttotal,
-        t_min=t_min,
-        t_p_Rog=t_p_Rog,
-        i_first_local_min=i_first_local_min,
-        delta_omega=delta_omega
-    )
-
-
-    return sigma_z1_values, sigma_z_values, t_min, t_p_Rog, i_first_local_min, circuit
-
-
-
-# In[ ]:
+    return sigma_z1_values, sigma_z_values, t_min, t_p_Rog, i_first_local_min
 
 
 for list_index in range(len(N_sites_list)):
-    main(N_sites_list[list_index], delta_omega_list[list_index])
+    run_single_config(N_sites_list[list_index], delta_omega_list[list_index])
 
