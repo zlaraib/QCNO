@@ -323,9 +323,9 @@ def evolve_and_simulate(
                 shots, two_qubit_gate, euler_basis, basis_gates
             )
 
-            sigma_z_sorted, _ = calc_mean_and_sigma(counts_z, shots, 'Z', N_sites, df=df)
-            sigma_x_sorted, _ = calc_mean_and_sigma(counts_x, shots, 'X', N_sites, df=df)
-            sigma_y_sorted, _ = calc_mean_and_sigma(counts_y, shots, 'Y', N_sites, df=df)
+            sigma_z_sorted, _ = calc_mean_and_sigma(counts_z, shots, N_sites, df=df)
+            sigma_x_sorted, _ = calc_mean_and_sigma(counts_x, shots, N_sites, df=df)
+            sigma_y_sorted, _ = calc_mean_and_sigma(counts_y, shots, N_sites, df=df)
 
             # Reverse if calc_mean_and_sigma returns Qiskit bitstring order
             sigma_x_sorted = np.asarray(sigma_x_sorted)[::-1]

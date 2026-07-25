@@ -1,23 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
-import os
-
-# Limit the number of cores
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["JULIA_NUM_THREADS"] = "1"
-
-print("OMP_NUM_THREADS:", os.environ["OMP_NUM_THREADS"])
-print("MKL_NUM_THREADS:", os.environ["MKL_NUM_THREADS"])
-print("JULIA_NUM_THREADS:", os.environ["JULIA_NUM_THREADS"])
-
-
-# In[ ]:
-
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -33,11 +14,16 @@ from qiskit.circuit.library import StatePreparation
 import sys
 import os
 
+#===========================#
+# Limit the number of cores #
+#===========================#
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["JULIA_NUM_THREADS"] = "1"
 
-# 
-
-# In[ ]:
-
+print("OMP_NUM_THREADS:", os.environ["OMP_NUM_THREADS"])
+print("MKL_NUM_THREADS:", os.environ["MKL_NUM_THREADS"])
+print("JULIA_NUM_THREADS:", os.environ["JULIA_NUM_THREADS"])
 
 # Determine the correct path for the 'src' directory
 if '__file__' in globals():
@@ -50,9 +36,9 @@ else:
 sys.path.append(src_dir)
 
 
-# In[ ]:
-
-
+#=======================#
+# Import QCNO libraries #
+#=======================#
 from hamiltonian import construct_hamiltonian
 from momentum import momentum
 from meas_counts import get_direct_state, meas_counts
@@ -67,22 +53,15 @@ from time_evolution import (
     append_row, append_scalar_row, reset_file,
 )
 
-
-# In[ ]:
-
-
-backend_name = "aer" #manila,guadalupe, aer, ibm, ionq(ideal simulator non-native gateset), ionq_native (ideal simulator native gateset), ionq_qpu (ionq device non-native gateset), ionq_noisy_sim (noisy simulator non-native gateset), ibm 
-trotter_order= "second" # first, second
-
 ibm_service, ionq_provider = activate_backends()
-
-
-# In[ ]:
 
 
 # =========================
 # Parameter lists (Julia equivalent)
 # =========================
+backend_name = "aer"
+trotter_order= "first"
+
 delta_omega_list = [-0.5, 0.0, 1.0, 0.5, 0.125]
 N_sites_list     = [   4,   4,   4,  4,     4]
 
@@ -104,10 +83,7 @@ b_t = Roggero_table[:, 2]
 c_t = Roggero_table[:, 3]
 pmin = Roggero_table[:, 4]
 
-
-# In[ ]:
-
-
+# remove - and . from strings
 def safe_float_string(x):
     s = str(x)
     s = s.replace("-", "m")
@@ -115,9 +91,7 @@ def safe_float_string(x):
     return s
 
 
-# In[ ]:
-
-
+# extract the fit parameters corresponding to a particular value of delta_omega
 def get_Roggero_fit_params(delta_omega):
     matches = np.where(delta_omega_Rog == delta_omega)[0]
     if len(matches) == 0:
@@ -125,10 +99,7 @@ def get_Roggero_fit_params(delta_omega):
     idx = int(matches[0])
     return a_t[idx], b_t[idx], c_t[idx], idx
 
-
-# In[ ]:
-
-
+# find the first minimum to compare with Roggero results
 def find_first_local_minima_index(arr):
     n = len(arr)
     for i in range(1, n - 1):
@@ -136,12 +107,9 @@ def find_first_local_minima_index(arr):
             return i
     return -1
 
-
-# In[ ]:
-
-# =========================
-# Constant inputs (independent of N_sites / delta_omega)
-# =========================
+#========================================================#
+# Constant inputs (independent of N_sites / delta_omega) #
+#========================================================#
 params = {}
 params["shots"] = 10420
 params["trotter_steps"] = 5  # try comparing for larger trotter steps
@@ -173,7 +141,6 @@ params["dx"] = 1e-3
 params["L"] = 1.0
 params["dp"] = params["L"]
 
-params["theta_nu"] = 0.0
 params["shape_name"] = "none"
 params["geometric_name"] = "none"
 params["periodic"] = False
@@ -182,7 +149,8 @@ params["B_pert"] = None
 params["advection"] = False  # True/False
 
 # Match Julia create_gates B = [sin(2θ), 0, -cos(2θ)].
-B = np.array([np.sin(2 * params["theta_nu"]), 0.0, -np.cos(2 * params["theta_nu"])], dtype=float)
+theta_nu = 0.0
+B = np.array([np.sin(2 * theta_nu), 0.0, -np.cos(2 * theta_nu)], dtype=float)
 params["B"] = B / np.linalg.norm(B)
 
 
@@ -240,7 +208,7 @@ def record_step(state, params, datadir):
         params["euler_basis"], params["basis_gates"]
     )
     sigma_z_sorted, _ = calc_mean_and_sigma(
-        counts_z, params["shots"], 'Z', params["N_sites"], df=params["df"]
+        counts_z, params["shots"], params["N_sites"], df=params["df"]
     )
     sigma_z_sorted = np.asarray(sigma_z_sorted)[::-1]
 

@@ -280,9 +280,9 @@ def simulate(params):
                 shots, two_qubit_gate, euler_basis, basis_gates,
             )
 
-            sigma_z, _ = calc_mean_and_sigma(counts_z, shots, "Z", N_sites, df=df)
-            sigma_x, _ = calc_mean_and_sigma(counts_x, shots, "X", N_sites, df=df)
-            sigma_y, _ = calc_mean_and_sigma(counts_y, shots, "Y", N_sites, df=df)
+            sigma_z, _ = calc_mean_and_sigma(counts_z, shots, N_sites, df=df)
+            sigma_x, _ = calc_mean_and_sigma(counts_x, shots, N_sites, df=df)
+            sigma_y, _ = calc_mean_and_sigma(counts_y, shots, N_sites, df=df)
 
             sigma_x = np.asarray(sigma_x, dtype=float)[::-1]
             sigma_y = np.asarray(sigma_y, dtype=float)[::-1]
