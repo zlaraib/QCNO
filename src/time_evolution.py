@@ -21,6 +21,7 @@ from activate_backend import backend_supports_direct_state
 from evolve import apply_one_timestep_dynamic_positions
 from run_parameters import write_run_parameters
 from momentum import vacuum_frequency
+from measure import measure
 
 
 def reorder_sorted_to_original(data_sorted, particle_ids):
@@ -59,20 +60,68 @@ def append_scalar_row(path, t, value):
         np.savetxt(f, np.array([[t, float(value)]]), fmt="%.16e")
 
 
-def run_time_evolution(params, datadir, record_step):
+def _sigma_path(datadir, basis):
+    return os.path.join(datadir, f"t_sigma_{basis.lower()}.dat")
+
+
+def reset_observable_files(params, datadir):
+    """Truncate every per-step observable file record_observables appends to, so a
+    run starts from empty (the driver does the same for the position/momentum
+    files)."""
+    os.makedirs(datadir, exist_ok=True)
+    for basis in params["measure"]:
+        reset_file(_sigma_path(datadir, basis))
+
+
+def record_observables(state, params, datadir):
+    """
+    Standardized per-step measurement and output. Replaces the per-test
+    record_step callback that used to be injected into run_time_evolution: the
+    driver now owns this and it is driven entirely by params, with fixed file
+    names.
+
+    Inputs:
+    - state: the per-step dict the driver builds (keys used: "t", "qc_base",
+      "particle_ids", "direct_ok").
+    - params: run-parameter dict. Keys used:
+        "measure": Pauli bases sampled each step -> t_sigma_<b>.dat, written in
+          original particle order.
+    - datadir: output directory.
+
+    Quantities derived purely from the sampled sigmas (e.g. the density-matrix
+    components rho_ee/mumu/emu, see rho_from_counts.py) are computed in
+    post-processing from the t_sigma_*.dat files, not here. Exact-state
+    observables (direct sigmas, entanglement entropy, magic — via
+    exact_state.reduce_exact_state + entanglement.py), gated by
+    state["direct_ok"], are added here when the direct-state tests are ported.
+    """
+    t = state["t"]
+    qc_base = state["qc_base"]
+    particle_ids = state["particle_ids"]
+
+    # Sampled single-site Pauli sigmas, written in original particle order.
+    sigmas = {
+        basis: reorder_sorted_to_original(sig, particle_ids)
+        for basis, sig in measure(qc_base, params).items()
+    }
+    for basis, sig in sigmas.items():
+        append_row(_sigma_path(datadir, basis), t, sig)
+
+
+def run_time_evolution(params, datadir):
     """
     Drive the time-evolution loop shared by all test scripts.
 
     The driver sorts the sites into position order (the convention used by every
     test), builds the base circuit, and steps through `times`. On each step it
     records the positions/momenta (x, px, py, pz, in original particle order),
-    invokes record_step for the test's own measurement/analysis/output, and then
-    advances the state with apply_one_timestep_dynamic_positions.
+    calls record_observables for the standardized per-step measurement/output,
+    and then advances the state with apply_one_timestep_dynamic_positions.
 
-    The driver has no return value. Its outputs are run_parameters.json and the
-    position/momentum files it writes into datadir, plus the per-step call to
-    record_step. A test that needs position/momentum histories reads them back
-    from those files.
+    The driver has no return value. Its outputs are run_parameters.json, the
+    position/momentum files, and the observable files written by
+    record_observables (all into datadir). A test that needs these histories
+    reads them back from those files.
 
     Inputs:
     - params: dict of the run's physics inputs (the output of a test's
@@ -86,14 +135,8 @@ def run_time_evolution(params, datadir, record_step):
         Propagation (forwarded to apply_one_timestep_dynamic_positions):
           "tau", "dp", "L", "shape_name", "B", "dx", "geometric_name",
           "trotter_steps", "trotter_order", "periodic", "advection"
-    - datadir: directory for the position/momentum files (created if needed).
-    - record_step: callback invoked once per timestep as
-          record_step(state, params, datadir)
-      where state is a dict:
-          {"step_idx", "t", "qc_base", "x", "p", "N", "omega", "energy_sign",
-           "particle_ids", "direct_ok"}
-      with arrays in current sorted-site order. It performs the test's own
-      measurement/analysis/output.
+        Observables (consumed by record_observables): "measure".
+    - datadir: directory for all output files (created if needed).
     """
     times = params["times"]
     N_sites = params["N_sites"]
@@ -143,6 +186,9 @@ def run_time_evolution(params, datadir, record_step):
     reset_file(py_path)
     reset_file(pz_path)
 
+    # start the per-step observable files empty too
+    reset_observable_files(params, datadir)
+
     for step_idx, t in enumerate(times):
         # -------------------------------
         # Positions and momenta in original particle order (every sim)
@@ -153,9 +199,9 @@ def run_time_evolution(params, datadir, record_step):
         append_row(pz_path, t, reorder_sorted_to_original(p[:, 2], particle_ids))
 
         # -------------------------------
-        # Test-specific measurement / analysis / output
+        # Standardized per-step measurement / analysis / output
         # -------------------------------
-        record_step(
+        record_observables(
             {
                 "step_idx": step_idx,
                 "t": t,

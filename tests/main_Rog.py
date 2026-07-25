@@ -41,17 +41,12 @@ sys.path.append(src_dir)
 #=======================#
 from hamiltonian import construct_hamiltonian
 from momentum import momentum
-from meas_counts import get_direct_state, meas_counts
 from base_circuit import initialize_base_circuit
-from sigma_statistics import calc_mean_and_sigma
 from constants import hbar, c , eV, MeV, GeV, G_F, kB
 from evolve import apply_one_timestep_dynamic_positions, apply_qubit_permutation
 from perturb import pert_circuit
 from activate_backend import activate_backends, build_backend, backend_supports_direct_state
-from time_evolution import (
-    run_time_evolution, reorder_sorted_to_original,
-    append_row, append_scalar_row, reset_file,
-)
+from time_evolution import run_time_evolution
 
 ibm_service, ionq_provider = activate_backends()
 
@@ -112,6 +107,7 @@ def find_first_local_minima_index(arr):
 #========================================================#
 params = {}
 params["shots"] = 10420
+params["measure"] = ["Z"]  # Pauli bases sampled each step (Rog needs only sigma_z)
 params["trotter_steps"] = 5  # try comparing for larger trotter steps
 params["optimization_level"] = 0
 
@@ -188,33 +184,8 @@ def initialize_parameters(N_sites, delta_omega):
 
     return params
 
-def record_step(state, params, datadir):
-    """Per-timestep sigma_z measurement and output for main_Rog.
-
-    Called by run_time_evolution. Reads its measurement config from `params` and
-    writes sigma_z / -sigma_z1 into `datadir`; main() reads those files back for
-    the post-loop fit. Positions/momenta are recorded by the driver, not here.
-    """
-    t = state["t"]
-    qc_base = state["qc_base"]
-    particle_ids = state["particle_ids"]
-
-    # -------------------------------
-    # Measurement-based sigma_z from counts
-    # -------------------------------
-    counts_z, _ = meas_counts(qc_base, 'Z', params)
-    sigma_z_sorted, _ = calc_mean_and_sigma(counts_z, params)
-    sigma_z_sorted = np.asarray(sigma_z_sorted)[::-1]
-
-    sigma_z_original = reorder_sorted_to_original(sigma_z_sorted, particle_ids)
-
-    print(f"iteration={state['step_idx']} t={t} sigma_z(original order) = {sigma_z_original}")
-
-    append_row(os.path.join(datadir, "t_sigma_z.dat"), t, sigma_z_original)
-    append_scalar_row(os.path.join(datadir, "minus_sigma_z1.dat"), t, -float(sigma_z_original[0]))
-
-
 def run_single_config(N_sites, delta_omega):
+    # set up parameters for this config
     params = initialize_parameters(N_sites, delta_omega)
 
     # each Roggero case gets its own datafiles subfolder
@@ -222,17 +193,17 @@ def run_single_config(N_sites, delta_omega):
     datadir = os.path.join(os.getcwd(), "datafiles", case_tag)
     os.makedirs(datadir, exist_ok=True)
 
-    sz_path = os.path.join(datadir, "t_sigma_z.dat")
-    reset_file(sz_path)
-    reset_file(os.path.join(datadir, "minus_sigma_z1.dat"))
-
-    run_time_evolution(params, datadir, record_step)
+    # DO THE REAL WORK
+    # loop over integration times; the driver measures the observables named in
+    # params ("measure") and writes the standardized output files.
+    run_time_evolution(params, datadir)
 
     # read sigma_z back from file for the post-loop fit
     times = np.asarray(params["times"], dtype=float)
     τ = params["tau"]
     tolerance = params["tolerance"]
 
+    sz_path = os.path.join(datadir, "t_sigma_z.dat")
     sigma_z_values = np.atleast_2d(np.loadtxt(sz_path))[:, 1:]  # drop leading time column
     print(f"sigma_z_values = {sigma_z_values}")
 
