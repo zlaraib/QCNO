@@ -10,9 +10,12 @@
 # backend_supports_direct_state(backend) is True (the driver exposes that as
 # state["direct_ok"]).
 #
-# Site convention (shared with construct_hamiltonian and the sampled sigmas):
-# a Pauli label is written left-to-right as qubit N-1 ... qubit 0, so label
-# position `site` corresponds to Qiskit qubit index N_sites - 1 - site.
+# Site convention: site index == sorted slot == Qiskit qubit index, the same
+# indexing the sampled sigma path (measure / calc_mean_and_sigma) produces, so
+# exact and sampled single-site quantities line up slot-for-slot before the
+# caller reorders to original particle order. A single-site Pauli acting on qubit
+# q is written at Pauli-label position N_sites - 1 - q (Qiskit's little-endian
+# label order).
 
 import numpy as np
 
@@ -24,7 +27,7 @@ from meas_counts import get_direct_state
 class ExactState:
     """
     Wraps the exact statevector / density matrix for one timestep and serves
-    exact observables under the source/Julia-style site convention.
+    exact observables in sorted-slot (= Qiskit qubit) order.
 
     Attributes:
     - statevector, density_matrix: the exact Qiskit objects.
@@ -36,38 +39,30 @@ class ExactState:
         self.density_matrix = density_matrix
         self.N_sites = N_sites
 
-    def _site_to_qubit(self, site):
-        return self.N_sites - 1 - int(site)
-
     def single_site_sigmas(self, bases=("X", "Y", "Z")):
         """
-        Exact per-site <sigma_b> for each basis in `bases`, in sorted-site order.
-
-        Mirrors measure()'s output shape so a test can compare the exact sigmas
-        against the sampled ones site-by-site.
+        Exact per-site <sigma_b> for each basis in `bases`, indexed by sorted slot
+        (= Qiskit qubit). Mirrors measure()'s output shape so a test can compare
+        the exact sigmas against the sampled ones slot-for-slot.
         """
         sigmas = {b: np.zeros(self.N_sites, dtype=float) for b in bases}
-        for site in range(self.N_sites):
+        for q in range(self.N_sites):
             for b in bases:
                 label = ["I"] * self.N_sites
-                label[site] = b
-                op = Pauli("".join(label))
-                val = self.statevector.expectation_value(op)
-                sigmas[b][site] = np.real_if_close(val).real
+                label[self.N_sites - 1 - q] = b  # qubit q -> label position N-1-q
+                val = self.statevector.expectation_value(Pauli("".join(label)))
+                sigmas[b][q] = np.real_if_close(val).real
         return sigmas
 
     def rdm_for_sites(self, keep_sites):
         """
-        Reduced density matrix keeping `keep_sites` and tracing out the rest.
-
-        `keep_sites` are site indices (source/Julia-style); they are mapped to
-        Qiskit qubit indices before tracing. The returned RDM feeds the scalar
-        functionals in entanglement.py (renyi2_from_rdm,
-        stabilizer_renyi_magic_from_rdm), which are invariant to the ordering of
-        the kept qubits.
+        Reduced density matrix keeping `keep_sites` (sorted-slot / qubit indices)
+        and tracing out the rest. The returned RDM feeds the scalar functionals
+        in entanglement.py (renyi2_from_rdm, stabilizer_renyi_magic_from_rdm),
+        which are invariant to the ordering of the kept qubits.
         """
-        keep_qubits = {self._site_to_qubit(s) for s in keep_sites}
-        traced_out = [q for q in range(self.N_sites) if q not in keep_qubits]
+        keep = {int(s) for s in keep_sites}
+        traced_out = [q for q in range(self.N_sites) if q not in keep]
         return partial_trace(self.density_matrix, traced_out)
 
 
@@ -84,7 +79,7 @@ def reduce_exact_state(qc_base, params):
     - ExactState wrapping the exact statevector and density matrix.
 
     Requires an Aer backend (get_direct_state asserts this). Guard the call with
-    state["direct_ok"] in record_step.
+    state["direct_ok"] in record_observables.
     """
     _, density_matrix, statevector = get_direct_state(
         qc_base, params["backend"], params["optimization_level"]

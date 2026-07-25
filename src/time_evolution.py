@@ -22,6 +22,7 @@ from evolve import apply_one_timestep_dynamic_positions
 from run_parameters import write_run_parameters
 from momentum import vacuum_frequency
 from measure import measure
+from exact_state import reduce_exact_state
 
 
 def reorder_sorted_to_original(data_sorted, particle_ids):
@@ -60,17 +61,26 @@ def append_scalar_row(path, t, value):
         np.savetxt(f, np.array([[t, float(value)]]), fmt="%.16e")
 
 
-def _sigma_path(datadir, basis):
-    return os.path.join(datadir, f"t_sigma_{basis.lower()}.dat")
+def _sigma_path(datadir, basis, suffix=""):
+    return os.path.join(datadir, f"t_sigma_{basis.lower()}{suffix}.dat")
+
+
+# Bases always available from the exact single-site state (see
+# ExactState.single_site_sigmas), written to t_sigma_<b>_direct.dat.
+_DIRECT_BASES = ("X", "Y", "Z")
 
 
 def reset_observable_files(params, datadir):
     """Truncate every per-step observable file record_observables appends to, so a
     run starts from empty (the driver does the same for the position/momentum
-    files)."""
+    files). The direct-sigma files are only created when the exact state is
+    available, matching record_observables."""
     os.makedirs(datadir, exist_ok=True)
     for basis in params["measure"]:
         reset_file(_sigma_path(datadir, basis))
+    if backend_supports_direct_state(params["backend"]):
+        for basis in _DIRECT_BASES:
+            reset_file(_sigma_path(datadir, basis, "_direct"))
 
 
 def print_progress_header(params):
@@ -98,10 +108,20 @@ def record_observables(state, params, datadir):
 
     Quantities derived purely from the sampled sigmas (e.g. the density-matrix
     components rho_ee/mumu/emu, see rho_from_counts.py) are computed in
-    post-processing from the t_sigma_*.dat files, not here. Exact-state
-    observables (direct sigmas, entanglement entropy, magic — via
-    exact_state.reduce_exact_state + entanglement.py), gated by
-    state["direct_ok"], are added here when the direct-state tests are ported.
+    post-processing from the t_sigma_*.dat files, not here.
+
+    Exact-state observables are recorded here because they need the per-step
+    exact state, which is not saved to file. Only the irreducible primitives are
+    recorded; anything derivable from them is left to post-processing. Whenever
+    the backend exposes the exact state (state["direct_ok"], i.e. Aer) the
+    noise-free single-site sigmas are recorded automatically ->
+    t_sigma_x/y/z_direct.dat; on backends without an exact state those files are
+    not created at all. Direct rho components are derived from these files in
+    post-processing (rho_from_sigmas), exactly like the sampled path.
+
+    Genuinely many-body scalars that cannot be reconstructed from single-site
+    sigmas (entanglement entropy, multi-site magic; exact_state + entanglement.py)
+    attach here the same way when the Josh test is ported.
     """
     t = state["t"]
     qc_base = state["qc_base"]
@@ -114,6 +134,17 @@ def record_observables(state, params, datadir):
     }
     for basis, sig in sigmas.items():
         append_row(_sigma_path(datadir, basis), t, sig)
+
+    # Exact single-site sigmas (noise-free ground truth), recorded automatically
+    # whenever the backend exposes the exact state. Needs the per-step exact
+    # state, so it is recorded in the loop; rho is derived from these files in
+    # post-processing. On backends without an exact state the direct files are
+    # simply not created.
+    if state["direct_ok"]:
+        exact = reduce_exact_state(qc_base, params).single_site_sigmas()
+        for basis in _DIRECT_BASES:
+            row = reorder_sorted_to_original(exact[basis], particle_ids)
+            append_row(_sigma_path(datadir, basis, "_direct"), t, row)
 
     # Basic per-step progress row (see print_progress_header for the columns):
     # iteration, cumulative trotter steps applied so far, t, then the domain
