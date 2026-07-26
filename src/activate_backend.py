@@ -187,14 +187,6 @@ def build_backend(backend_name, ibm_service, ionq_provider, backend_options=None
     elif backend_name == 'ionq_qpu':
         backend = ionq_provider.get_backend("ionq_qpu")
 
-    elif backend_name == 'ionq_noisy_sim':
-        # IonQ simulator with Aria-style noise, using QIS gates
-        # TODO: identical to ionq_simulator below -- the two branches used to
-        # differ only in the (now removed) gateset variables, which nothing read.
-        # Noise has to be requested explicitly of the IonQ simulator, e.g.
-        # backend_options={"noise_model": "aria-1"}, so this currently runs ideal.
-        backend = ionq_provider.get_backend("ionq_simulator")
-
     elif backend_name == 'ionq_simulator':
         # Ideal IonQ simulator using QIS gates
         backend = ionq_provider.get_backend("ionq_simulator")
