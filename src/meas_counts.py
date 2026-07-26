@@ -6,6 +6,7 @@ from qiskit import transpile
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit_ibm_runtime import SamplerV2 as Sampler
 from evolve import add_measurement_to_circuit
+from activate_backend import backend_supports_direct_state
 from qiskit.quantum_info import Statevector,DensityMatrix
 
 # Abstract ("QIS") gate set handed to the IonQ cloud compiler. IonQ is all-to-all,
@@ -69,11 +70,7 @@ def get_direct_state(params, state):
     - direct_state: Final DensityMatrix (density_matrix method) or Statevector
       (any other method). Both support expectation_value() and partial_trace().
     """
-    backend_name = getattr(params["backend"], "name", None)
-    if callable(backend_name):
-        backend_name = backend_name()
-
-    assert backend_name is not None and "aer" in backend_name.lower(), (
+    assert backend_supports_direct_state(params["backend"]), (
         "get_direct_state requires a Qiskit Aer simulator backend."
     )
 
@@ -129,13 +126,7 @@ def meas_counts(qc_base, measure, params, iteration=None):
     ibm_backends = {"manila", "ibm", "guadalupe"}
     ionq_backends = {"ionq_simulator", "ionq_noisy_sim", "ionq_qpu"}
 
-    backend_name_attr = getattr(backend, "name", None)
-    if callable(backend_name_attr):
-        backend_name_attr = backend_name_attr()
-
-    is_aer_backend = (
-        backend_name_attr is not None and "aer" in backend_name_attr.lower()
-    )
+    is_aer_backend = backend_supports_direct_state(backend)
 
     def to_isa(input_qc):
         """

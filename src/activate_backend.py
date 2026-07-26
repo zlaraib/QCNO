@@ -115,31 +115,36 @@ def activate_backends():
     return ibm_service, ionq_provider
 
 
-def backend_supports_direct_state(backend, backend_name=None):
+def backend_name_of(backend):
+    """
+    The backend's own name, whichever way it exposes one.
+
+    Inputs:
+    - backend: the backend object returned by build_backend. `.name` is an
+      attribute on BackendV2 and a method on older backends.
+
+    Output:
+    - name string, falling back to repr(backend) if there is no name at all.
+    """
+    name = getattr(backend, "name", None)
+    if callable(name):
+        name = name()
+    if name is None:
+        name = str(backend)
+    return str(name)
+
+
+def backend_supports_direct_state(backend):
     """
     Report whether a backend allows direct statevector access (Aer only).
 
     Inputs:
     - backend: the backend object returned by build_backend.
-    - backend_name: optional name string; when provided it is used instead of
-      inspecting the backend object.
 
     Output:
     - True for true Aer simulator backends, False otherwise.
     """
-    if backend_name is not None:
-        name = str(backend_name).lower()
-        # only allow true Aer simulator backends for direct state access
-        return "aer" in name
-
-    name_attr = getattr(backend, "name", None)
-    if callable(name_attr):
-        name_attr = name_attr()
-    if name_attr is None:
-        name_attr = str(backend)
-
-    name_attr = str(name_attr).lower()
-    return "aer" in name_attr
+    return "aer" in backend_name_of(backend).lower()
 
 
 def build_backend(backend_name, ibm_service, ionq_provider, backend_options=None,
