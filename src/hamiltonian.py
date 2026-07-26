@@ -23,19 +23,17 @@ def construct_hamiltonian(params, state):
                                           coef_vec = (omega/2)*B = per-axis (cx,cy,cz)
                                           for cx*X + cy*Y + cz*Z
       All 'JJ' terms come first (as a generalized even/odd brickwork over spacing),
-      followed by one 'BJ' term per site. Qubit indices already include the
-      site->qubit reversal (site i maps to qubit N_sites - 1 - i) that the old
-      big-endian Pauli labels encoded, so downstream code applies gates directly to
-      these indices with no remapping.
+      followed by one 'BJ' term per site. Site index == qubit index (the shared
+      convention of initialize_base_circuit and the recorders), so downstream code
+      applies gates directly to these indices with no remapping.
     """
     terms = []
 
     p_mod, p_hat = momentum(state["p"], params["N_sites"])
 
-    def q(site):
-        # Preserve the big-endian convention of the old Pauli labels:
-        # site placed at label position `site` acted on qubit N_sites - 1 - site.
-        return params["N_sites"] - 1 - site
+    # Site index == qubit index. initialize_base_circuit puts sorted slot i on
+    # qubit i, and the recorders report qubit i as site i, so a site's couplings
+    # have to act on the qubit of the same index.
 
     # Two-site coupling terms, emitted as a generalized even/odd brickwork.
     #
@@ -66,7 +64,7 @@ def construct_hamiltonian(params, state):
                 # print("interaction_strength from site ", i, " and site ", j, "= ", interaction_strength)
 
                 if interaction_strength != 0:
-                    terms.append((interaction_strength, 'JJ', (q(i), q(j))))
+                    terms.append((interaction_strength, 'JJ', (i, j)))
 
     # Single-site (vacuum) terms: one grouped 'BJ' term per site, appended after
     # all two-site 'JJ' terms. Each carries the full per-axis coefficient vector
@@ -75,6 +73,6 @@ def construct_hamiltonian(params, state):
     # term, moving to a per-site field later is just indexing B by site here.
     for k in range(params["N_sites"]):
         if state["omega"][k] != 0:
-            terms.append(((state["omega"][k] / 2) * np.array(params["B"]), 'BJ', (q(k),)))
+            terms.append(((state["omega"][k] / 2) * np.array(params["B"]), 'BJ', (k,)))
 
     return terms

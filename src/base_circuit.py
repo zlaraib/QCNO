@@ -17,7 +17,8 @@ def initialize_base_circuit(n_qubits, bit_list_sorted=None, B_pert=None, alpha=N
     - n_qubits: Number of qubits / sites.
     - bit_list_sorted: List of '0'/'1' characters, one per site in sorted order.
       The bitstring is reversed before state preparation to match Qiskit's
-      little-endian qubit ordering (site i -> qubit n_qubits-1-i).
+      little-endian qubit ordering, which puts site i on qubit i -- the same
+      convention construct_hamiltonian and the observable recorders use.
     - B_pert, alpha: Optional perturbation field and strength. When B_pert is
       not None, pert_circuit is applied after the initial state is prepared.
 

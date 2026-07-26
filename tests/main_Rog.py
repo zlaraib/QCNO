@@ -169,10 +169,11 @@ def initialize_parameters(N_sites, delta_omega):
     p = np.column_stack((px, np.zeros(N_sites), np.zeros(N_sites)))
     params["p"] = p
 
-    # Roggero Julia convention: first half +1, second half -1. Negated so the
-    # shared omega = Δm²/(2|p|)*energy_sign reproduces the Roggero sign
-    # (originally omega carried an explicit leading minus).
-    params["energy_sign"] = -np.array(
+    # Roggero Julia convention: first half +1, second half -1. This used to be
+    # negated to compensate for construct_hamiltonian mirroring site i onto qubit
+    # N-1-i, which for this configuration is the same as flipping every sign; the
+    # mirror is gone, so the Roggero convention is now used as it stands.
+    params["energy_sign"] = np.array(
         [1 if i < N_sites // 2 else -1 for i in range(N_sites)],
         dtype=int,
     )

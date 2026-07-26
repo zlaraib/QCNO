@@ -123,7 +123,9 @@ def initialize_parameters(ibm_service, ionq_provider):
     print("N =", params["N"])
 
     # --- B field (same for all particles) ---
-    B = np.array([-np.sin(2 * theta_nu), 0, np.cos(2 * theta_nu)])
+    # Standard flavor-isospin convention B = (sin 2θ, 0, -cos 2θ), shared by every
+    # test. The sign of the vacuum term is carried by energy_sign, not by B.
+    B = np.array([np.sin(2 * theta_nu), 0, -np.cos(2 * theta_nu)])
     params["B"] = B / np.linalg.norm(B)
 
     # --- positions: neutrinos and antineutrinos share the same grid ---
@@ -145,9 +147,13 @@ def initialize_parameters(ibm_service, ionq_provider):
     pz = np.zeros(N_sites)
     params["p"] = np.column_stack((px, py, pz))
 
-    # first half antineutrinos (-1), second half neutrinos (+1)
-    params["energy_sign"] = np.array([-1 if i < N_sites // 2 else 1 for i in range(N_sites)])
-    params["bit_list"] = ['0' if s == -1 else '1' for s in params["energy_sign"]]
+    # First half antineutrinos, second half neutrinos. energy_sign sets the sign of
+    # omega, and only the product omega*B enters the vacuum term, so with the
+    # standard B above the antineutrino sites take +1. In the flavor-isospin
+    # convention an antineutrino carries both a flipped omega and a flipped isospin,
+    # so those sites also start '1' (<sigma_z> = -1) and the neutrino sites '0'.
+    params["energy_sign"] = np.array([1 if i < N_sites // 2 else -1 for i in range(N_sites)])
+    params["bit_list"] = ['1' if s == 1 else '0' for s in params["energy_sign"]]
 
     return params
 
