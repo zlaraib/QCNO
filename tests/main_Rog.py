@@ -47,6 +47,7 @@ from evolve import apply_one_timestep_dynamic_positions, apply_qubit_permutation
 from perturb import pert_circuit
 from activate_backend import activate_backends, build_backend, backend_supports_direct_state
 from time_evolution import run_time_evolution
+from observables import SigmaObservable, DirectSigmaObservable
 
 ibm_service, ionq_provider = activate_backends()
 
@@ -107,7 +108,12 @@ def find_first_local_minima_index(arr):
 #========================================================#
 params = {}
 params["shots"] = 10420
-params["measure"] = ["Z"]  # Pauli bases sampled each step (Rog needs only sigma_z)
+params["observables"] = [  # Rog needs only sigma_z sampled
+    SigmaObservable("Z"),
+    DirectSigmaObservable("X"),
+    DirectSigmaObservable("Y"),
+    DirectSigmaObservable("Z"),
+]
 params["trotter_steps"] = 5  # try comparing for larger trotter steps
 params["optimization_level"] = 0
 
@@ -190,20 +196,19 @@ def run_single_config(N_sites, delta_omega):
 
     # each Roggero case gets its own datafiles subfolder
     case_tag = f"N{N_sites}_dw{safe_float_string(delta_omega)}"
-    datadir = os.path.join(os.getcwd(), "datafiles", case_tag)
-    os.makedirs(datadir, exist_ok=True)
+    params["datadir"] = os.path.join(os.getcwd(), "datafiles", case_tag)
 
     # DO THE REAL WORK
-    # loop over integration times; the driver measures the observables named in
-    # params ("measure") and writes the standardized output files.
-    run_time_evolution(params, datadir)
+    # loop over integration times; the driver calls the recorders in
+    # params["observables"] and writes their output files.
+    run_time_evolution(params)
 
     # read sigma_z back from file for the post-loop fit
     times = np.asarray(params["times"], dtype=float)
     τ = params["tau"]
     tolerance = params["tolerance"]
 
-    sz_path = os.path.join(datadir, "t_sigma_z.dat")
+    sz_path = os.path.join(params["datadir"], "t_sigma_z.dat")
     sigma_z_values = np.atleast_2d(np.loadtxt(sz_path))[:, 1:]  # drop leading time column
     print(f"sigma_z_values = {sigma_z_values}")
 

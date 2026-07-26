@@ -27,6 +27,7 @@ sys.path.append(src_dir)
 from constants import hbar, c, MeV
 from activate_backend import activate_backends, build_backend, backend_supports_direct_state
 from time_evolution import run_time_evolution
+from observables import SigmaObservable, DirectSigmaObservable
 from rho_from_counts import rho_from_sigmas
 
 
@@ -55,7 +56,15 @@ def initialize_parameters(ibm_service, ionq_provider):
     params["trotter_order"] = trotter_order
     params["optimization_level"] = 1
     params["df"] = 1
-    params["measure"] = ["X", "Y", "Z"]
+    params["datadir"] = os.path.join(os.getcwd(), "datafiles")
+    params["observables"] = [
+        SigmaObservable("X"),
+        SigmaObservable("Y"),
+        SigmaObservable("Z"),
+        DirectSigmaObservable("X"),
+        DirectSigmaObservable("Y"),
+        DirectSigmaObservable("Z"),
+    ]
     params["backend_name"] = backend_name
 
     # --- time grid ---
@@ -214,12 +223,12 @@ def chi_squareg_test(par, tt, shots):
 
 
 def simulate(params):
-    datadir = os.path.join(os.getcwd(), "datafiles")
+    datadir = params["datadir"]
 
     # Driver: sorts by position, builds the (perturbed) circuit, and each step
     # samples sigma_{x,y,z} (-> t_sigma_*.dat) and records the exact single-site
     # sigmas (-> t_sigma_*_direct.dat), plus the position/momentum files.
-    run_time_evolution(params, datadir)
+    run_time_evolution(params)
 
     # Sampled rho is a post-processing transform of the sampled sigma files.
     rho_from_sigmas(datadir)                        # sampled -> t_rho_*_from_counts.dat

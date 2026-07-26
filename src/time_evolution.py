@@ -3,192 +3,51 @@
 # Shared time-stepping driver for the test scripts. It owns the boilerplate that
 # is identical across every test: the initial sort into position order, the
 # base-circuit construction, the recording of positions/momenta (x, px, py, pz)
-# every step, and the loop that advances the state with
-# apply_one_timestep_dynamic_positions. Each test supplies a record_step
-# callback that performs its own (test-specific) measurement and file output.
-#
-# File output convention: files are opened in append mode, written, and closed
-# on every write (see append_row / append_scalar_row). The per-step compute far
-# outweighs the open/close cost, and this keeps callers free of handle
-# bookkeeping. Call reset_file once before a run to start from an empty file.
+# every step, the per-step stdout progress table, and the loop that advances the
+# state with apply_one_timestep_dynamic_positions. The measurement and observable
+# output belong to the recorders in params["observables"] (observables.py).
 
 import os
 
 import numpy as np
 
 from base_circuit import initialize_base_circuit
-from activate_backend import backend_supports_direct_state
 from evolve import apply_one_timestep_dynamic_positions
 from run_parameters import write_run_parameters
 from momentum import vacuum_frequency
-from measure import measure
-from exact_state import reduce_exact_state
+from activate_backend import backend_supports_direct_state
+from meas_counts import get_direct_state
+from observables import Observable, reorder_sorted_to_original, reset_file, write_row
 
 
-def reorder_sorted_to_original(data_sorted, particle_ids):
-    """
-    Map an array given in sorted-site order back to original particle order.
-
-    Inputs:
-    - data_sorted: array indexed by sorted-site slot.
-    - particle_ids: original particle id occupying each sorted slot.
-
-    Output:
-    - data_original: array indexed by original particle id.
-    """
-    data_sorted = np.asarray(data_sorted)
-    data_original = np.empty_like(data_sorted)
-    for sorted_slot, pid in enumerate(particle_ids):
-        data_original[pid] = data_sorted[sorted_slot]
-    return data_original
-
-
-def reset_file(path):
-    """Truncate (or create) a file so a run starts from empty."""
-    open(path, "w").close()
-
-
-def append_row(path, t, values):
-    """Append '<t> <values...>' as one high-precision row (open/append/close)."""
-    row = np.concatenate(([t], np.asarray(values, dtype=float).ravel()))
-    with open(path, "a") as f:
-        np.savetxt(f, row[None, :], fmt="%.16e")
-
-
-def append_scalar_row(path, t, value):
-    """Append '<t> <value>' as one high-precision row (open/append/close)."""
-    with open(path, "a") as f:
-        np.savetxt(f, np.array([[t, float(value)]]), fmt="%.16e")
-
-
-def _sigma_path(datadir, basis, suffix=""):
-    return os.path.join(datadir, f"t_sigma_{basis.lower()}{suffix}.dat")
-
-
-# Bases always available from the exact single-site state (see
-# ExactState.single_site_sigmas), written to t_sigma_<b>_direct.dat.
-_DIRECT_BASES = ("X", "Y", "Z")
-
-
-def reset_observable_files(params, datadir):
-    """Truncate every per-step observable file record_observables appends to, so a
-    run starts from empty (the driver does the same for the position/momentum
-    files). The direct-sigma files are only created when the exact state is
-    available, matching record_observables."""
-    os.makedirs(datadir, exist_ok=True)
-    for basis in params["measure"]:
-        reset_file(_sigma_path(datadir, basis))
-    if backend_supports_direct_state(params["backend"]):
-        for basis in _DIRECT_BASES:
-            reset_file(_sigma_path(datadir, basis, "_direct"))
-
-
-def print_progress_header(params):
-    """Print the column header for the per-step progress table that
-    record_observables writes to stdout: iteration, trotter_steps, t, then one
-    site-averaged <sigma_b> column per basis in params["measure"]."""
-    labels = "".join(f"{'<sigma_' + b.lower() + '>':>13}" for b in params["measure"])
-    print(f"{'iter':>6}{'trotter':>9}{'t':>15}{labels}")
-
-
-def record_observables(state, params, datadir):
-    """
-    Standardized per-step measurement and output. Replaces the per-test
-    record_step callback that used to be injected into run_time_evolution: the
-    driver now owns this and it is driven entirely by params, with fixed file
-    names.
-
-    Inputs:
-    - state: the per-step dict the driver builds (keys used: "t", "qc_base",
-      "particle_ids", "direct_ok").
-    - params: run-parameter dict. Keys used:
-        "measure": Pauli bases sampled each step -> t_sigma_<b>.dat, written in
-          original particle order.
-    - datadir: output directory.
-
-    Quantities derived purely from the sampled sigmas (e.g. the density-matrix
-    components rho_ee/mumu/emu, see rho_from_counts.py) are computed in
-    post-processing from the t_sigma_*.dat files, not here.
-
-    Exact-state observables are recorded here because they need the per-step
-    exact state, which is not saved to file. Only the irreducible primitives are
-    recorded; anything derivable from them is left to post-processing. Whenever
-    the backend exposes the exact state (state["direct_ok"], i.e. Aer) the
-    noise-free single-site sigmas are recorded automatically ->
-    t_sigma_x/y/z_direct.dat; on backends without an exact state those files are
-    not created at all. Direct rho components are derived from these files in
-    post-processing (rho_from_sigmas), exactly like the sampled path.
-
-    Genuinely many-body scalars that cannot be reconstructed from single-site
-    sigmas (entanglement entropy, multi-site magic; exact_state + entanglement.py)
-    attach here the same way when the Josh test is ported.
-    """
-    t = state["t"]
-    qc_base = state["qc_base"]
-    particle_ids = state["particle_ids"]
-
-    # Sampled single-site Pauli sigmas, written in original particle order.
-    sigmas = {
-        basis: reorder_sorted_to_original(sig, particle_ids)
-        for basis, sig in measure(qc_base, params).items()
-    }
-    for basis, sig in sigmas.items():
-        append_row(_sigma_path(datadir, basis), t, sig)
-
-    # Exact single-site sigmas (noise-free ground truth), recorded automatically
-    # whenever the backend exposes the exact state. Needs the per-step exact
-    # state, so it is recorded in the loop; rho is derived from these files in
-    # post-processing. On backends without an exact state the direct files are
-    # simply not created.
-    if state["direct_ok"]:
-        exact = reduce_exact_state(qc_base, params).single_site_sigmas()
-        for basis in _DIRECT_BASES:
-            row = reorder_sorted_to_original(exact[basis], particle_ids)
-            append_row(_sigma_path(datadir, basis, "_direct"), t, row)
-
-    # Basic per-step progress row (see print_progress_header for the columns):
-    # iteration, cumulative trotter steps applied so far, t, then the domain
-    # (site) average of each measured sigma. Recording happens before the step is
-    # advanced, so iteration k has had k full timesteps applied.
-    trotter_total = state["step_idx"] * params["trotter_steps"]
-    means = "".join(f"{np.mean(sigmas[basis]):>+13.4f}" for basis in params["measure"])
-    print(f"{state['step_idx']:>6}{trotter_total:>9}{t:>15.6e}{means}")
-
-
-def run_time_evolution(params, datadir):
+def run_time_evolution(params):
     """
     Drive the time-evolution loop shared by all test scripts.
 
     The driver sorts the sites into position order (the convention used by every
     test), builds the base circuit, and steps through `times`. On each step it
     records the positions/momenta (x, px, py, pz, in original particle order),
-    calls record_observables for the standardized per-step measurement/output,
-    and then advances the state with apply_one_timestep_dynamic_positions.
+    calls every recorder in params["observables"], prints one progress row, and
+    advances the state with apply_one_timestep_dynamic_positions.
 
     The driver has no return value. Its outputs are run_parameters.json, the
-    position/momentum files, and the observable files written by
-    record_observables (all into datadir). A test that needs these histories
-    reads them back from those files.
+    position/momentum files, and the recorders' files, all written into
+    params["datadir"]. A test that needs these histories reads them back from
+    those files.
 
     Inputs:
-    - params: dict of the run's physics inputs (the output of a test's
-      initialize_parameters). Keys used here:
-        Physics state (copied, then mutated across steps):
-          "times", "x", "p", "N", "energy_sign", "bit_list", "N_sites"
-        Vacuum frequency (omega is derived here as Δm²/(2|p|)*energy_sign):
-          "delta_m_squared"
-        Initial circuit:
-          "backend", "B_pert", "alpha"
-        Propagation (forwarded to apply_one_timestep_dynamic_positions):
-          "tau", "dp", "L", "shape_name", "B", "dx", "geometric_name",
-          "trotter_steps", "trotter_order", "periodic", "advection"
-        Observables (consumed by record_observables): "measure".
-    - datadir: directory for all output files (created if needed).
+    - params: dict of the run's inputs (the output of a test's
+      initialize_parameters), including the list of Observable recorders in
+      params["observables"] and the output directory params["datadir"].
     """
     times = params["times"]
     N_sites = params["N_sites"]
-    backend = params["backend"]
+    observables = params["observables"]
+    datadir = params["datadir"]
     os.makedirs(datadir, exist_ok=True)
+
+    for obs in observables:
+        obs.create_file(params)
 
     # record the exact inputs of this run before anything is sorted/mutated
     write_run_parameters(os.path.join(datadir, "run_parameters.json"), params)
@@ -221,8 +80,6 @@ def run_time_evolution(params, datadir):
         B_pert=params["B_pert"],
         alpha=params["alpha"],
     )
-    direct_ok = backend_supports_direct_state(backend)
-
     # start the position/momentum files empty
     x_path = os.path.join(datadir, "t_xsiteval.dat")
     px_path = os.path.join(datadir, "t_pxsiteval.dat")
@@ -233,39 +90,53 @@ def run_time_evolution(params, datadir):
     reset_file(py_path)
     reset_file(pz_path)
 
-    # start the per-step observable files empty too
-    reset_observable_files(params, datadir)
-
-    print_progress_header(params)
+    # progress table: iteration, cumulative trotter steps, t, then the columns the
+    # recorders contribute
+    header = "".join(obs.progress_header for obs in observables)
+    print(f"{'iter':>6}{'trotter':>9}{'t':>15}{header}")
 
     for step_idx, t in enumerate(times):
         # -------------------------------
         # Positions and momenta in original particle order (every sim)
         # -------------------------------
-        append_row(x_path, t, reorder_sorted_to_original(x, particle_ids))
-        append_row(px_path, t, reorder_sorted_to_original(p[:, 0], particle_ids))
-        append_row(py_path, t, reorder_sorted_to_original(p[:, 1], particle_ids))
-        append_row(pz_path, t, reorder_sorted_to_original(p[:, 2], particle_ids))
+        write_row(x_path, t, reorder_sorted_to_original(x, particle_ids))
+        write_row(px_path, t, reorder_sorted_to_original(p[:, 0], particle_ids))
+        write_row(py_path, t, reorder_sorted_to_original(p[:, 1], particle_ids))
+        write_row(pz_path, t, reorder_sorted_to_original(p[:, 2], particle_ids))
 
         # -------------------------------
-        # Standardized per-step measurement / analysis / output
+        # Per-step measurement / analysis / output
         # -------------------------------
-        record_observables(
-            {
-                "step_idx": step_idx,
-                "t": t,
-                "qc_base": qc_base,
-                "x": x,
-                "p": p,
-                "N": N,
-                "omega": omega,
-                "energy_sign": energy_sign,
-                "particle_ids": particle_ids,
-                "direct_ok": direct_ok,
-            },
-            params,
-            datadir,
-        )
+        # the exact state is pulled once per step and shared by the recorders that
+        # need it
+        exact_state = None
+        if any(obs.requires_exact_state for obs in observables) and backend_supports_direct_state(params["backend"]):
+            _, exact_state = get_direct_state(
+                qc_base, params["backend"], params["optimization_level"]
+            )
+
+        state = {
+            "step_idx": step_idx,
+            "t": t,
+            "qc_base": qc_base,
+            "x": x,
+            "p": p,
+            "N": N,
+            "omega": omega,
+            "energy_sign": energy_sign,
+            "particle_ids": particle_ids,
+            "exact_state": exact_state,
+        }
+        progress = []
+        for obs in observables:
+            progress += obs.append_row(params, state)
+
+        # Recording happens before the step is advanced, so iteration k has had k
+        # full timesteps applied.
+        trotter_total = step_idx * params["trotter_steps"]
+        width = Observable.PROGRESS_COLUMN_WIDTH
+        values = "".join(f"{v:>+{width}.4f}" for v in progress)
+        print(f"{step_idx:>6}{trotter_total:>9}{t:>15.6e}{values}")
 
         # stop after recording the last point
         if step_idx == len(times) - 1:

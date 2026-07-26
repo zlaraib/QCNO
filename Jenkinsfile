@@ -65,7 +65,11 @@ pipeline {
 		sh 'find . -name "*.pdf"'
 		archiveArtifacts artifacts: '**/*.pdf'
 		sh 'rm -rf datafiles plots'
-    } 
+    }
+}
+	stage('Observables unit test'){ steps{
+		sh 'python tests/test_observables.py'
+    }
 }
 
 }// stages{

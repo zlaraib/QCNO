@@ -16,6 +16,7 @@ if src_dir not in sys.path:
     sys.path.append(src_dir)
 
 from time_evolution import run_time_evolution
+from observables import SigmaObservable, DirectSigmaObservable
 from momentum import vacuum_frequency
 from constants import hbar, eV, MeV, G_F
 from activate_backend import activate_backends, build_backend
@@ -52,7 +53,15 @@ def initialize_parameters(ibm_service, ionq_provider):
     params["advection"] = False  # True/False
     params["backend_name"] = backend_name
     params["trotter_order"] = trotter_order
-    params["measure"] = ["X", "Y", "Z"]
+    params["datadir"] = os.path.join(os.getcwd(), "datafiles")
+    params["observables"] = [
+        SigmaObservable("X"),
+        SigmaObservable("Y"),
+        SigmaObservable("Z"),
+        DirectSigmaObservable("X"),
+        DirectSigmaObservable("Y"),
+        DirectSigmaObservable("Z"),
+    ]
 
     # Optional perturbation parameters
     params["B_pert"] = None
@@ -114,13 +123,13 @@ def initialize_parameters(ibm_service, ionq_provider):
 
 
 def simulate(params):
-    datadir = os.path.join(os.getcwd(), "datafiles")
+    datadir = params["datadir"]
 
-    # Run the shared driver. It sorts by position, builds the base circuit,
-    # measures the Pauli bases in params["measure"] each step, and writes
-    # t_sigma_{x,y,z}.dat (plus the position/momentum files and
-    # run_parameters.json) into datadir.
-    run_time_evolution(params, datadir)
+    # Run the shared driver. It sorts by position, builds the base circuit, and
+    # each step calls the recorders in params["observables"] -- writing
+    # t_sigma_{x,y,z}{,_direct}.dat alongside the position/momentum files and
+    # run_parameters.json, all into datadir.
+    run_time_evolution(params)
 
     # ----------------------------------------------------------------------
     # Post-processing: site-1 <Sz> vs the analytic vacuum-oscillation curve.
