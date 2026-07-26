@@ -105,11 +105,6 @@ def initialize_parameters(ibm_service, ionq_provider):
     mu = np.zeros(N_sites, dtype=float)
     params["N"] = mu * np.full(N_sites, (params["dx"] ** 3) / (np.sqrt(2) * G_F), dtype=float)
 
-    B = np.array(
-        [np.sin(2 * params["theta_nu"]), 0.0, -np.cos(2 * params["theta_nu"])], dtype=float
-    )
-    params["B"] = B / np.linalg.norm(B)
-
     x0 = np.random.rand()
     y0 = np.random.rand()
     params["x"] = np.full(N_sites, x0, dtype=float)

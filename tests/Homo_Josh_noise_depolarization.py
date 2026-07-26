@@ -58,7 +58,7 @@ def initialize_parameters(ibm_service, ionq_provider):
     m1 = 0 * eV                 # 1st mass eigenstate (Richers 2021)
     m2 = 0 * eV                 # 2nd mass eigenstate (Richers 2021)
     params["delta_m_squared"] = (m2**2 - m1**2)  # erg^2, so omega = 0 here
-    theta_nu = 1000             # mixing angle, only used to build B below
+    params["theta_nu"] = 1000   # mixing angle
 
     # --- run controls ---
     params["shots"] = 1042
@@ -163,12 +163,6 @@ def initialize_parameters(ibm_service, ionq_provider):
     # --- number densities -> particle counts per site ---
     mu = 1
     params["N"] = mu * np.full(N_sites, (params["dx"]**3) / (np.sqrt(2) * G_F * N_sites))
-
-    # --- B field (same for all particles) ---
-    # Standard flavor-isospin convention B = (sin 2θ, 0, -cos 2θ), shared by every
-    # test. Δm² is 0 here, so omega is 0 and this term does not contribute.
-    B = np.array([np.sin(2 * theta_nu), 0, -np.cos(2 * theta_nu)])
-    params["B"] = B / np.linalg.norm(B)
 
     # --- positions: both flavors on the same grid ---
     N_sites_eachflavor = N_sites // 2

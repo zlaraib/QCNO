@@ -143,9 +143,7 @@ params["B_pert"] = None
 params["advection"] = False  # True/False
 
 # Match Julia create_gates B = [sin(2θ), 0, -cos(2θ)].
-theta_nu = 0.0
-B = np.array([np.sin(2 * theta_nu), 0.0, -np.cos(2 * theta_nu)], dtype=float)
-params["B"] = B / np.linalg.norm(B)
+params["theta_nu"] = 0.0
 
 
 def initialize_parameters(N_sites, delta_omega):

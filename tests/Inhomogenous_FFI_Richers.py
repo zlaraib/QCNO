@@ -122,12 +122,6 @@ def initialize_parameters(ibm_service, ionq_provider):
     params["N"] = np.concatenate((N_1, N_2))
     print("N =", params["N"])
 
-    # --- B field (same for all particles) ---
-    # Standard flavor-isospin convention B = (sin 2θ, 0, -cos 2θ), shared by every
-    # test. The sign of the vacuum term is carried by energy_sign, not by B.
-    B = np.array([np.sin(2 * theta_nu), 0, -np.cos(2 * theta_nu)])
-    params["B"] = B / np.linalg.norm(B)
-
     # --- positions: neutrinos and antineutrinos share the same grid ---
     def generate_x_array(N_sites_eachflavor, L):
         one_flavor = [(i - 0.5) * L / N_sites_eachflavor for i in range(1, N_sites_eachflavor + 1)]

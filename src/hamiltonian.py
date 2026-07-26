@@ -71,8 +71,9 @@ def construct_hamiltonian(params, state):
     # (omega[k]/2) * B, emitted downstream (evolve.apply_single_site_gate) as one
     # exact 1-qubit UnitaryGate. Because the site's whole field lives in a single
     # term, moving to a per-site field later is just indexing B by site here.
+    B = np.array([np.sin(2 * params["theta_nu"]), 0.0, -np.cos(2 * params["theta_nu"])])
     for k in range(params["N_sites"]):
         if state["omega"][k] != 0:
-            terms.append(((state["omega"][k] / 2) * np.array(params["B"]), 'BJ', (k,)))
+            terms.append(((state["omega"][k] / 2) * B, 'BJ', (k,)))
 
     return terms

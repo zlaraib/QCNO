@@ -118,13 +118,6 @@ def initialize_parameters(ibm_service, ionq_provider):
     N_2 = np.full(N_sites // 2, n_νₑ̄ * V)
     params["N"] = np.concatenate((N_1, N_2))
 
-    # --- B field (same for all particles) ---
-    # Standard flavor-isospin convention B = (sin 2θ, 0, -cos 2θ), shared by every
-    # test. The sign of the vacuum term is carried by energy_sign, not by B.
-    theta_nu = params["theta_nu"]
-    B = np.array([np.sin(2 * theta_nu), 0, -np.cos(2 * theta_nu)])
-    params["B"] = B / np.linalg.norm(B)
-
     # --- positions (grid, first particle at L/(2 N_sites)) ---
     def generate_x_array(N_sites, L):
         return [(i - 0.5) * L / N_sites for i in range(1, N_sites + 1)]

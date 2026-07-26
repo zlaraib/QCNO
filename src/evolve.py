@@ -162,7 +162,7 @@ def apply_one_timestep_dynamic_positions(params, state):
 
     Inputs:
     - params: run-parameter dict, for the timestep τ ("tau"), the Hamiltonian
-      ("dp", "L", "shape_name", "B", "N_sites", "dx", "geometric_name",
+      ("dp", "L", "shape_name", "theta_nu", "N_sites", "dx", "geometric_name",
       "periodic"), the Trotterization ("trotter_steps", "trotter_order") and
       whether particles move ("advection").
     - state: the driver's per-step dict, read for "qc_base", "N", "x", "p",
