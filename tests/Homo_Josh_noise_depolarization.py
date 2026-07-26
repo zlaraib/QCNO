@@ -149,9 +149,7 @@ def initialize_parameters(ibm_service, ionq_provider):
         method="density_matrix",
         noise_model=noise_depol,
     )
-    # euler_basis / basis_gates / two_qubit_gate are returned for call-signature
-    # compatibility only; nothing reads them any more.
-    params["backend"], _, _, _ = build_backend(
+    params["backend"] = build_backend(
         backend_name, ibm_service, ionq_provider, backend_options=backend_options,
         ibm_backend="least_busy",
     )

@@ -165,61 +165,39 @@ def build_backend(backend_name, ibm_service, ionq_provider, backend_options=None
       non-IBM backends.
 
     Output:
-    - (backend, euler_basis, basis_gates, two_qubit_gate). The last three are
-      retained for call-signature compatibility with the test notebooks;
-      meas_counts no longer uses them.
+    - backend.
     """
     if backend_name == 'manila':
         backend = FakeManilaV2()
-        euler_basis = "U3"
-        basis_gates = ["rz", "sx", "x", "cx", "u3"]
-        two_qubit_gate = "ECR"
 
     elif backend_name == 'guadalupe':
         backend = FakeGuadalupeV2()  # fake ibm backend but runs for uptil 16 qubits
-        euler_basis = "U3"
-        basis_gates = ["rz", "sx", "x", "cx", "u3"]
-        two_qubit_gate = "ECR"
 
     elif backend_name == 'aer':
         # method (e.g. "matrix_product_state") and any noise_model are supplied
         # by the caller through backend_options and applied via set_options below.
         backend = AerSimulator()
-        euler_basis = None
-        basis_gates = None
-        two_qubit_gate = None  # not used for Aer
 
     elif backend_name == 'ibm':
         if ibm_backend == "least_busy":
             backend = ibm_service.least_busy(operational=True, simulator=False)
         else:
             backend = ibm_service.backend(ibm_backend)
-        euler_basis = "U3"
-        try:
-            basis_gates = backend.configuration().basis_gates
-        except Exception:
-            basis_gates = ["rz", "sx", "x", "ecr"]
-        two_qubit_gate = "ECR"
 
     elif backend_name == 'ionq_qpu':
         backend = ionq_provider.get_backend("ionq_qpu")
-        euler_basis = None
-        basis_gates = None
-        two_qubit_gate = None
 
     elif backend_name == 'ionq_noisy_sim':
         # IonQ simulator with Aria-style noise, using QIS gates
+        # TODO: identical to ionq_simulator below -- the two branches used to
+        # differ only in the (now removed) gateset variables, which nothing read.
+        # Noise has to be requested explicitly of the IonQ simulator, e.g.
+        # backend_options={"noise_model": "aria-1"}, so this currently runs ideal.
         backend = ionq_provider.get_backend("ionq_simulator")
-        euler_basis = "XYX"
-        basis_gates = ["rx", "ry", "rz", "rxx"]
-        two_qubit_gate = "RXX"
 
     elif backend_name == 'ionq_simulator':
         # Ideal IonQ simulator using QIS gates
         backend = ionq_provider.get_backend("ionq_simulator")
-        euler_basis = "XYX"
-        basis_gates = ["rx", "ry", "rz", "rxx"]
-        two_qubit_gate = "RXX"
 
     else:
         raise ValueError(f"Unsupported backend_name: {backend_name}")
@@ -227,4 +205,4 @@ def build_backend(backend_name, ibm_service, ionq_provider, backend_options=None
     if backend_options:
         backend.set_options(**backend_options)
 
-    return backend, euler_basis, basis_gates, two_qubit_gate
+    return backend

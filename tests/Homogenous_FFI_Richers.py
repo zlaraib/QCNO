@@ -96,12 +96,7 @@ def initialize_parameters(ibm_service, ionq_provider):
         matrix_product_state_truncation_threshold=1e-100,
         mps_sample_measure_algorithm="mps_apply_measure",
     )
-    (
-        params["backend"],
-        params["euler_basis"],
-        params["basis_gates"],
-        params["two_qubit_gate"],
-    ) = build_backend(
+    params["backend"] = build_backend(
         backend_name, ibm_service, ionq_provider, backend_options=backend_options,
         ibm_backend="least_busy",
     )

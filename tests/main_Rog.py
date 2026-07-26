@@ -123,14 +123,10 @@ backend_options = dict(
     matrix_product_state_truncation_threshold=1e-16,
     mps_sample_measure_algorithm="mps_apply_measure",
 )
-backend, euler_basis, basis_gates, two_qubit_gate = build_backend(
+params["backend"] = build_backend(
     backend_name, ibm_service, ionq_provider, backend_options=backend_options,
 )
-params["backend"] = backend
 params["backend_name"] = backend_name
-params["euler_basis"] = euler_basis
-params["basis_gates"] = basis_gates
-params["two_qubit_gate"] = two_qubit_gate
 params["trotter_order"] = trotter_order
 
 params["tolerance"] = 5e-1
