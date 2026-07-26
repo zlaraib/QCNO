@@ -97,7 +97,7 @@ class Observable:
     - append_row(params, state): write one row to each file, return one float per
       progress_header column ([] if none).
 
-    A subclass that reads state["exact_state"] sets requires_exact_state = True;
+    A subclass that reads state["direct_state"] sets requires_direct_state = True;
     the driver only pulls the exact state if some recorder asks for it.
     """
 
@@ -106,7 +106,7 @@ class Observable:
     def __init__(self):
         self.path = None
         self.progress_header = ""
-        self.requires_exact_state = False
+        self.requires_direct_state = False
 
     def generate_progress_header(self, *labels):
         """Lay out column labels, one per value append_row returns."""
@@ -129,6 +129,47 @@ class Observable:
 
     def __repr__(self):
         return type(self).__name__
+
+
+class PositionObservable(Observable):
+    """
+    Site positions -> t_xsiteval.dat, one row of '<t> <x per particle...>' per
+    timestep in original particle order.
+
+    No progress column.
+    """
+
+    def create_file(self, params):
+        self.path = os.path.join(params["datadir"], "t_xsiteval.dat")
+        reset_file(self.path)
+
+    def append_row(self, params, state):
+        x = reorder_sorted_to_original(state["x"], state["particle_ids"])
+        write_row(self.path, state["t"], x)
+        return []
+
+
+class MomentumObservable(Observable):
+    """
+    One momentum component -> t_p<c>siteval.dat, same row layout as
+    PositionObservable.
+
+    No progress column.
+    """
+
+    def __init__(self, component):
+        """component: "x", "y" or "z"."""
+        super().__init__()
+        self.component = component
+
+    def create_file(self, params):
+        self.path = os.path.join(params["datadir"], f"t_p{self.component}siteval.dat")
+        reset_file(self.path)
+
+    def append_row(self, params, state):
+        p = np.asarray(state["p"])[:, "xyz".index(self.component)]
+        write_row(self.path, state["t"], reorder_sorted_to_original(p, state["particle_ids"]))
+        return []
 
 
 class SigmaObservable(Observable):
@@ -188,7 +229,7 @@ class DensityMatrixObservable(Observable):
 
     def __init__(self):
         super().__init__()
-        self.requires_exact_state = True
+        self.requires_direct_state = True
 
     def create_file(self, params):
         assert_density_matrix_method(params["backend"])
@@ -200,7 +241,7 @@ class DensityMatrixObservable(Observable):
 
     def append_row(self, params, state):
         step_idx = state["step_idx"]
-        append_npz(self.path, f"rho_{step_idx:06d}", state["exact_state"].data)
+        append_npz(self.path, f"rho_{step_idx:06d}", state["direct_state"].data)
         append_npz(self.path, f"time_{step_idx:06d}", state["t"])
         return []
 
@@ -219,7 +260,7 @@ class DirectSigmaObservable(Observable):
         """basis: "X", "Y" or "Z"."""
         super().__init__()
         self.basis = basis
-        self.requires_exact_state = True
+        self.requires_direct_state = True
         self.progress_header = self.generate_progress_header(
             f"<sigma_{basis.lower()}D>"
         )
@@ -231,8 +272,8 @@ class DirectSigmaObservable(Observable):
         reset_file(self.path)
 
     def append_row(self, params, state):
-        exact_state = state["exact_state"]
-        N_sites = exact_state.num_qubits
+        direct_state = state["direct_state"]
+        N_sites = direct_state.num_qubits
 
         # qubit q sits at Pauli-label position N_sites-1-q, so sig comes out in
         # sorted-slot order, like the sampled path
@@ -240,7 +281,7 @@ class DirectSigmaObservable(Observable):
         for q in range(N_sites):
             label = ["I"] * N_sites
             label[N_sites - 1 - q] = self.basis
-            val = exact_state.expectation_value(Pauli("".join(label)))
+            val = direct_state.expectation_value(Pauli("".join(label)))
             sig[q] = np.real_if_close(val).real
         sig = reorder_sorted_to_original(sig, state["particle_ids"])
 
@@ -259,7 +300,7 @@ class SingleSiteEntanglementObservable(Observable):
 
     def __init__(self):
         super().__init__()
-        self.requires_exact_state = True
+        self.requires_direct_state = True
         self.progress_header = self.generate_progress_header("<S2_site>", "<M2_site>")
 
     def create_file(self, params):
@@ -270,13 +311,13 @@ class SingleSiteEntanglementObservable(Observable):
         reset_file(self.magic_path)
 
     def append_row(self, params, state):
-        exact_state = state["exact_state"]
-        N_sites = exact_state.num_qubits
+        direct_state = state["direct_state"]
+        N_sites = direct_state.num_qubits
 
         renyi2 = np.zeros(N_sites, dtype=float)
         magic = np.zeros(N_sites, dtype=float)
         for q in range(N_sites):
-            rdm = rdm_for_sites(exact_state, [q], N_sites)
+            rdm = rdm_for_sites(direct_state, [q], N_sites)
             renyi2[q] = renyi2_from_rdm(rdm)
             magic[q] = stabilizer_renyi_magic_from_rdm(rdm)
         renyi2 = reorder_sorted_to_original(renyi2, state["particle_ids"])
@@ -303,7 +344,7 @@ class TwoSiteEntanglementObservable(Observable):
 
     def __init__(self):
         super().__init__()
-        self.requires_exact_state = True
+        self.requires_direct_state = True
         self.progress_header = self.generate_progress_header("<S2_2site>", "<M2_2site>")
 
     def create_file(self, params):
@@ -324,13 +365,13 @@ class TwoSiteEntanglementObservable(Observable):
         )
 
     def append_row(self, params, state):
-        exact_state = state["exact_state"]
-        N_sites = exact_state.num_qubits
+        direct_state = state["direct_state"]
+        N_sites = direct_state.num_qubits
 
         renyi2 = np.zeros(len(self.pairs), dtype=float)
         magic = np.zeros(len(self.pairs), dtype=float)
         for k, (site_i, site_j) in enumerate(self.pairs):
-            rdm = rdm_for_sites(exact_state, [site_i, site_j], N_sites)
+            rdm = rdm_for_sites(direct_state, [site_i, site_j], N_sites)
             renyi2[k] = renyi2_from_rdm(rdm)
             magic[k] = stabilizer_renyi_magic_from_rdm(rdm)
 
@@ -351,7 +392,7 @@ class BipartiteEntanglementObservable(Observable):
 
     def __init__(self):
         super().__init__()
-        self.requires_exact_state = True
+        self.requires_direct_state = True
         self.progress_header = self.generate_progress_header("<S2_bipart>", "<M2_bipart>")
 
     def create_file(self, params):
@@ -362,10 +403,10 @@ class BipartiteEntanglementObservable(Observable):
         reset_file(self.magic_path)
 
     def append_row(self, params, state):
-        exact_state = state["exact_state"]
-        N_sites = exact_state.num_qubits
+        direct_state = state["direct_state"]
+        N_sites = direct_state.num_qubits
 
-        rdm = rdm_for_sites(exact_state, range(N_sites // 2), N_sites)
+        rdm = rdm_for_sites(direct_state, range(N_sites // 2), N_sites)
         renyi2 = renyi2_from_rdm(rdm)
         magic = stabilizer_renyi_magic_from_rdm(rdm)
 
@@ -388,7 +429,7 @@ class GlobalMagicObservable(Observable):
 
     def __init__(self):
         super().__init__()
-        self.requires_exact_state = True
+        self.requires_direct_state = True
         self.progress_header = self.generate_progress_header("<M2_global>")
 
     def create_file(self, params):
@@ -409,7 +450,7 @@ class GlobalMagicObservable(Observable):
 
     def append_row(self, params, state):
         magic, pauli_weights = stabilizer_renyi_magic_from_rdm(
-            state["exact_state"], return_pauli_weights=True
+            state["direct_state"], return_pauli_weights=True
         )
 
         write_row(self.magic_path, state["t"], [magic])

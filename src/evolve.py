@@ -161,77 +161,44 @@ def apply_qubit_permutation(qc, current_particle_ids, target_particle_ids):
 
     return qc, np.array(current_particle_ids)
 
-def apply_one_timestep_dynamic_positions(
-    qc,
-    τ,
-    N, x, Δp, L, shape_name, omega, B,
-    n_qubits, Δx, p, geometric_name,
-    trotter_steps, trotter_order, periodic,
-    particle_ids,
-    energy_sign,
-    advection,
-):
+def apply_one_timestep_dynamic_positions(params, state):
     """
     Apply one full physical timestep τ, but update particle positions
     after every Trotter substep dt = τ / trotter_steps.
 
-    Returns updated:
-        qc, N, x, p, omega, particle_ids
-    """
-        
-    """
     Inputs:
-    - qc: Qiskit QuantumCircuit to which gates are appended.
-    - τ: Total physical time for this timestep.
-
-    Hamiltonian parameters:
-    - N: Number of particles/modes.
-    - x: Positions array.
-    - Δp: Momentum spacing.
-    - L: System size.
-    - shape_name: Initial distribution shape.
-    - omega, B: Physical Hamiltonian parameters.
-
-    Discretization / system:
-    - n_qubits: Number of qubits (sites).
-    - Δx: Spatial lattice spacing (should satisfy Δx = L / n_qubits).
-    - p: Momentum values.
-    - geometric_name: Geometry type.
-    - periodic: Whether boundary conditions are periodic.
-
-    Trotterization:
-    - trotter_steps: Number of Trotter steps.
-    - trotter_order: 'first' (Lie-Trotter) or 'second' (Suzuki-Trotter).
+    - params: run-parameter dict, for the timestep τ ("tau"), the Hamiltonian
+      ("dp", "L", "shape_name", "B", "N_sites", "dx", "geometric_name",
+      "periodic"), the Trotterization ("trotter_steps", "trotter_order") and
+      whether particles move ("advection").
+    - state: the driver's per-step dict, read for "qc_base", "N", "x", "p",
+      "omega", "particle_ids" and "energy_sign".
 
     Output:
-    - qc: QuantumCircuit with evolution gates for one timestep appended.
+    - state, with those same seven entries advanced by one timestep.
     """
-
     # τ = total physical time for this full step
     # trotter_steps splits τ into smaller steps:
     # dt = time per Trotter step
-    dt = τ / trotter_steps
+    dt = params["tau"] / params["trotter_steps"]
 
-    for step in range(trotter_steps):
+    for step in range(params["trotter_steps"]):
         # -------------------------------------------------
         # 1. Build Hamiltonian using current positions x
         # -------------------------------------------------
-        pauli_terms = construct_hamiltonian(
-            N, x, Δp, L, shape_name, omega, B,
-            n_qubits, Δx, p, geometric_name, periodic
-        )
+        pauli_terms = construct_hamiltonian(params, state)
 
         # dt_substep = effective time used in each exponential
         # - first order: full dt per term
         # - second order: half-step per term (due to symmetric decomposition)
-        if trotter_order == "first":
+        if params["trotter_order"] == "first":
             dt_substep = dt / hbar
-            angle_factor_for_print = τ / hbar
+            angle_factor_for_print = params["tau"] / hbar
 
-        elif trotter_order == "second":
+        elif params["trotter_order"] == "second":
             dt_substep = dt / (2 * hbar)
             pauli_terms = pauli_terms + pauli_terms[::-1]
-            angle_factor_for_print = τ / (2 * hbar)
+            angle_factor_for_print = params["tau"] / (2 * hbar)
 
         else:
             raise ValueError("trotter_order must be 'first' or 'second'")
@@ -248,52 +215,45 @@ def apply_one_timestep_dynamic_positions(
             # )
 
             if op == 'JJ':
-                apply_JJ_gate(qc, angle, qubits[0], qubits[1])
+                apply_JJ_gate(state["qc_base"], angle, qubits[0], qubits[1])
             elif op == 'BJ':
-                apply_single_site_gate(qc, angle, qubits[0])
+                apply_single_site_gate(state["qc_base"], angle, qubits[0])
             else:
                 raise ValueError(f"Unknown Hamiltonian term op: {op!r}")
 
-        if advection:
+        if params["advection"]:
 
             # -------------------------------------------------
             # 3. Move particles by the smaller time dt
             # -------------------------------------------------
-            p_mod, p_hat = momentum(p, n_qubits)
+            p_mod, p_hat = momentum(state["p"], params["N_sites"])
             p_hat_x = np.asarray([sub_array[0] for sub_array in p_hat])
 
-            x = x + p_hat_x * c * dt
+            state["x"] = state["x"] + p_hat_x * c * dt
 
-            if periodic:
-                x = np.mod(x, L)
-                assert np.all(x >= 0) and np.all(x <= L)
+            if params["periodic"]:
+                state["x"] = np.mod(state["x"], params["L"])
+                assert np.all(state["x"] >= 0) and np.all(state["x"] <= params["L"])
 
             # -------------------------------------------------
             # 4. Resort metadata after particle motion
             # -------------------------------------------------
-            perm = np.argsort(x)
-
-            x_new = np.asarray(x)[perm].copy()
-            p_new = np.asarray(p)[perm].copy()
-            N_new = np.asarray(N)[perm].copy()
-            omega_new = np.asarray(omega)[perm].copy()
-            particle_ids_new = particle_ids[perm].copy()
-            energy_sign_new = np.asarray(energy_sign)[perm].copy()
+            perm = np.argsort(state["x"])
+            particle_ids_new = state["particle_ids"][perm].copy()
 
             # -------------------------------------------------
             # 5. Permute quantum state to match new sorted order
             # -------------------------------------------------
-            qc, particle_ids_after = apply_qubit_permutation(
-                qc,
-                particle_ids,
+            state["qc_base"], state["particle_ids"] = apply_qubit_permutation(
+                state["qc_base"],
+                state["particle_ids"],
                 particle_ids_new
             )
 
-            x = x_new
-            p = p_new
-            N = N_new
-            omega = omega_new
-            particle_ids = particle_ids_after
-            energy_sign = energy_sign_new
-    # print_julia_like_hamiltonian(pauli_terms, n_qubits, angle_factor_for_print)
-    return qc, N, x, p, omega, particle_ids, energy_sign
+            state["x"] = np.asarray(state["x"])[perm].copy()
+            state["p"] = np.asarray(state["p"])[perm].copy()
+            state["N"] = np.asarray(state["N"])[perm].copy()
+            state["omega"] = np.asarray(state["omega"])[perm].copy()
+            state["energy_sign"] = np.asarray(state["energy_sign"])[perm].copy()
+    # print_julia_like_hamiltonian(pauli_terms, params["N_sites"], angle_factor_for_print)
+    return state

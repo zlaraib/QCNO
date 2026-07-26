@@ -30,6 +30,8 @@ from constants import hbar, eV, MeV, G_F
 from activate_backend import activate_backends, build_backend
 from time_evolution import run_time_evolution
 from observables import (
+    PositionObservable,
+    MomentumObservable,
     SigmaObservable,
     DirectSigmaObservable,
     SingleSiteEntanglementObservable,
@@ -72,6 +74,10 @@ def initialize_parameters(ibm_service, ionq_provider):
     # half-system bipartition, then the global magic with its Pauli weights, and
     # finally the density matrix itself so a run can be re-analysed offline.
     params["observables"] = [
+        PositionObservable(),
+        MomentumObservable("x"),
+        MomentumObservable("y"),
+        MomentumObservable("z"),
         SigmaObservable("X"),
         SigmaObservable("Y"),
         SigmaObservable("Z"),

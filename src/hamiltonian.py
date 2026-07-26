@@ -8,23 +8,15 @@ from geometric_func import geometric_func
 from qiskit.circuit import QuantumCircuit
 from shape_func import shape_func
 
-def construct_hamiltonian(N, x, Δp, L, shape_name, omega, B, N_sites, Δx, p, geometric_name, periodic):
-    
+def construct_hamiltonian(params, state):
+
     """
     Build the Hamiltonian as a list of (coefficient, Pauli) terms.
 
     Inputs:
-    - N: Array of occupancies / weights for each site.
-    - x: Array of site positions.
-    - Δp: Momentum spacing.
-    - L: Total system size.
-    - shape_name: Name of the spatial shape function to use.
-    - omega: Array of vacuum oscillation frequencies for each site.
-    - B: Three-component coefficient vector for single-site X/Y/Z terms.
-    - N_sites: Number of lattice sites / qubits.
-    - p: Array of momenta for each site.
-    - geometric_name: Name of the geometric factor function to use.
-    - periodic: Whether to use periodic boundary conditions in the shape function.
+    - params: run-parameter dict.
+    - state: the driver's per-step dict, for the occupancies, positions, momenta
+      and vacuum frequencies as they stand at this substep.
 
     Output:
     - terms: List of (coefficient, operator, qubits) tuples, where each term is one of:
@@ -41,12 +33,12 @@ def construct_hamiltonian(N, x, Δp, L, shape_name, omega, B, N_sites, Δx, p, g
     """
     terms = []
 
-    p_mod, p_hat = momentum(p, N_sites)
+    p_mod, p_hat = momentum(state["p"], params["N_sites"])
 
     def q(site):
         # Preserve the big-endian convention of the old Pauli labels:
         # site placed at label position `site` acted on qubit N_sites - 1 - site.
-        return N_sites - 1 - site
+        return params["N_sites"] - 1 - site
 
     # Two-site coupling terms, emitted as a generalized even/odd brickwork.
     #
@@ -62,15 +54,15 @@ def construct_hamiltonian(N, x, Δp, L, shape_name, omega, B, N_sites, Δx, p, g
     # their ordering contributes no Trotter error -- only the inter-layer
     # non-commutativity remains. For d == 1 this is the standard nearest-neighbor
     # even/odd: bonds (0,1),(2,3),... then (1,2),(3,4),...
-    for d in range(1, N_sites):
+    for d in range(1, params["N_sites"]):
         for parity in (0, 1):
-            for i in range(N_sites - d):
+            for i in range(params["N_sites"] - d):
                 if (i // d) % 2 != parity:
                     continue
                 j = i + d
-                geometric_factor = geometric_func(geometric_name, p_hat, i, j)
-                shape_function = shape_func(x, Δp, i, j, L, shape_name, periodic)
-                interaction_strength = ((1/2) * np.sqrt(2) * G_F * (N[i] + N[j]) / (2 * ((Δx)**3))) * geometric_factor * shape_function
+                geometric_factor = geometric_func(params["geometric_name"], p_hat, i, j)
+                shape_function = shape_func(state["x"], params["dp"], i, j, params["L"], params["shape_name"], params["periodic"])
+                interaction_strength = ((1/2) * np.sqrt(2) * G_F * (state["N"][i] + state["N"][j]) / (2 * ((params["dx"])**3))) * geometric_factor * shape_function
 
                 # print("geometric_factor from site ", i, " and site ", j, "= ", geometric_factor)
                 # print("shape_function from site ", i, " and site ", j, "= ", shape_function)
@@ -84,8 +76,8 @@ def construct_hamiltonian(N, x, Δp, L, shape_name, omega, B, N_sites, Δx, p, g
     # (omega[k]/2) * B, emitted downstream (evolve.apply_single_site_gate) as one
     # exact 1-qubit UnitaryGate. Because the site's whole field lives in a single
     # term, moving to a per-site field later is just indexing B by site here.
-    for k in range(N_sites):
-        if omega[k] != 0:
-            terms.append(((omega[k] / 2) * np.array([B[0], B[1], B[2]]), 'BJ', (q(k),)))
+    for k in range(params["N_sites"]):
+        if state["omega"][k] != 0:
+            terms.append(((state["omega"][k] / 2) * np.array(params["B"]), 'BJ', (q(k),)))
 
     return terms

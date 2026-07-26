@@ -59,11 +59,11 @@ def product_state():
     return DensityMatrix(Statevector(amplitudes))
 
 
-def make_state(t, exact_state):
+def make_state(t, direct_state):
     """The part of the driver's per-step state dict these recorders read."""
     return {
         "t": t,
-        "exact_state": exact_state,
+        "direct_state": direct_state,
         "particle_ids": np.arange(N_sites),
     }
 

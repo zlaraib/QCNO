@@ -53,7 +53,7 @@ def _log_circuit_info(log_path, row, backend_name=None):
             _initialized_circuit_logs.add(log_path)
         writer.writerow(row)
 
-def get_direct_state(qc_base, backend, optimization_level):
+def get_direct_state(params, state):
     """
     Transpile a circuit for an Aer simulator backend and retrieve the final state
     directly from the simulator.
@@ -66,17 +66,15 @@ def get_direct_state(qc_base, backend, optimization_level):
     trajectories, so the returned statevector is one trajectory, not the ensemble.
 
     Inputs:
-    - qc_base: QuantumCircuit before save instructions are added.
-    - backend: Qiskit Aer simulator backend.
-    - optimization_level: Transpiler optimization level passed to
-      Qiskit's preset pass manager.
+    - params: run-parameter dict, for the Aer backend and the transpiler
+      optimization level.
+    - state: the driver's per-step dict, for the circuit to run.
 
     Output:
-    - isa_circuit: The transpiled circuit adapted to the target backend.
-    - exact_state: Final DensityMatrix (density_matrix method) or Statevector
+    - direct_state: Final DensityMatrix (density_matrix method) or Statevector
       (any other method). Both support expectation_value() and partial_trace().
     """
-    backend_name = getattr(backend, "name", None)
+    backend_name = getattr(params["backend"], "name", None)
     if callable(backend_name):
         backend_name = backend_name()
 
@@ -84,8 +82,8 @@ def get_direct_state(qc_base, backend, optimization_level):
         "get_direct_state requires a Qiskit Aer simulator backend."
     )
 
-    qc = qc_base.copy()
-    if getattr(backend.options, "method", None) == "density_matrix":
+    qc = state["qc_base"].copy()
+    if getattr(params["backend"].options, "method", None) == "density_matrix":
         qc.save_density_matrix()
     else:
         qc.save_statevector()
@@ -93,20 +91,20 @@ def get_direct_state(qc_base, backend, optimization_level):
     # Build a preset pass manager for the chosen backend and optimization level,
     # then transpile the input circuit into a backend-compatible ISA circuit.
     pm = generate_preset_pass_manager(
-        backend=backend,
-        optimization_level=optimization_level
+        backend=params["backend"],
+        optimization_level=params["optimization_level"]
     )
     isa_circuit = pm.run(qc)
 
-    result = backend.run(isa_circuit).result()
+    result = params["backend"].run(isa_circuit).result()
     data = result.data()
 
     if "density_matrix" in data:
-        exact_state = DensityMatrix(data["density_matrix"])
+        direct_state = DensityMatrix(data["density_matrix"])
     else:
-        exact_state = Statevector(data["statevector"])
+        direct_state = Statevector(data["statevector"])
 
-    return isa_circuit, exact_state
+    return direct_state
 
 # This function executes circuits differently depending on the backend type:
 # - IonQ → uses backend.run (required for IonQ APIs)

@@ -47,7 +47,12 @@ from evolve import apply_one_timestep_dynamic_positions, apply_qubit_permutation
 from perturb import pert_circuit
 from activate_backend import activate_backends, build_backend, backend_supports_direct_state
 from time_evolution import run_time_evolution
-from observables import SigmaObservable, DirectSigmaObservable
+from observables import (
+    PositionObservable,
+    MomentumObservable,
+    SigmaObservable,
+    DirectSigmaObservable,
+)
 
 ibm_service, ionq_provider = activate_backends()
 
@@ -109,6 +114,10 @@ def find_first_local_minima_index(arr):
 params = {}
 params["shots"] = 10420
 params["observables"] = [  # Rog needs only sigma_z sampled
+    PositionObservable(),
+    MomentumObservable("x"),
+    MomentumObservable("y"),
+    MomentumObservable("z"),
     SigmaObservable("Z"),
     DirectSigmaObservable("X"),
     DirectSigmaObservable("Y"),

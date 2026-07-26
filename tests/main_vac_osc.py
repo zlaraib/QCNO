@@ -16,7 +16,12 @@ if src_dir not in sys.path:
     sys.path.append(src_dir)
 
 from time_evolution import run_time_evolution
-from observables import SigmaObservable, DirectSigmaObservable
+from observables import (
+    PositionObservable,
+    MomentumObservable,
+    SigmaObservable,
+    DirectSigmaObservable,
+)
 from momentum import vacuum_frequency
 from constants import hbar, eV, MeV, G_F
 from activate_backend import activate_backends, build_backend
@@ -55,6 +60,10 @@ def initialize_parameters(ibm_service, ionq_provider):
     params["trotter_order"] = trotter_order
     params["datadir"] = os.path.join(os.getcwd(), "datafiles")
     params["observables"] = [
+        PositionObservable(),
+        MomentumObservable("x"),
+        MomentumObservable("y"),
+        MomentumObservable("z"),
         SigmaObservable("X"),
         SigmaObservable("Y"),
         SigmaObservable("Z"),

@@ -27,7 +27,12 @@ sys.path.append(src_dir)
 from constants import hbar, c, MeV
 from activate_backend import activate_backends, build_backend, backend_supports_direct_state
 from time_evolution import run_time_evolution
-from observables import SigmaObservable, DirectSigmaObservable
+from observables import (
+    PositionObservable,
+    MomentumObservable,
+    SigmaObservable,
+    DirectSigmaObservable,
+)
 from rho_from_counts import rho_from_sigmas
 
 
@@ -58,6 +63,10 @@ def initialize_parameters(ibm_service, ionq_provider):
     params["df"] = 1
     params["datadir"] = os.path.join(os.getcwd(), "datafiles")
     params["observables"] = [
+        PositionObservable(),
+        MomentumObservable("x"),
+        MomentumObservable("y"),
+        MomentumObservable("z"),
         SigmaObservable("X"),
         SigmaObservable("Y"),
         SigmaObservable("Z"),
