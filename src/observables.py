@@ -288,79 +288,45 @@ class DirectSigmaObservable(Observable):
         write_row(self.path, state["t"], sig)
         return [float(np.mean(sig))]
 
-class SingleSiteEntanglementObservable(Observable):
+class EntanglementObservable(Observable):
     """
-    Per-site Renyi-2 entropy -> t_renyi2_single_direct.dat and stabilizer Renyi-2
-    magic -> t_magic_single_direct.dat, both '<t> <value per particle...>'. Both
-    come from the same N single-site RDMs, which is why they are one recorder.
-    Needs the exact state (Aer only).
+    Renyi-2 entropy -> t_renyi2_<name>_direct.dat and stabilizer Renyi-2 magic ->
+    t_magic_<name>_direct.dat of a set of reduced density matrices, one column per
+    subset, in the order listed in <name>_subsets.dat. Both quantities come from
+    the same RDMs, which is why they are one recorder. Needs the exact state
+    (Aer only).
 
-    Progress columns: the site averages of S_2 and M_2.
+    Subclasses set name and implement site_subsets.
+
+    Progress columns: the subset averages of S_2 and M_2.
     """
+
+    name = None
+    reorder = False
 
     def __init__(self):
         super().__init__()
         self.requires_direct_state = True
-        self.progress_header = self.generate_progress_header("<S2_site>", "<M2_site>")
+        self.progress_header = self.generate_progress_header(
+            f"<S2_{self.name}>", f"<M2_{self.name}>"
+        )
+
+    def site_subsets(self, N_sites):
+        raise NotImplementedError(f"{type(self).__name__} must implement site_subsets")
 
     def create_file(self, params):
         assert_density_matrix_method(params["backend"])
-        self.renyi2_path = os.path.join(params["datadir"], "t_renyi2_single_direct.dat")
-        self.magic_path = os.path.join(params["datadir"], "t_magic_single_direct.dat")
+        self.subsets = self.site_subsets(params["N_sites"])
+
+        self.renyi2_path = os.path.join(params["datadir"], f"t_renyi2_{self.name}_direct.dat")
+        self.magic_path = os.path.join(params["datadir"], f"t_magic_{self.name}_direct.dat")
         reset_file(self.renyi2_path)
         reset_file(self.magic_path)
 
-    def append_row(self, params, state):
-        direct_state = state["direct_state"]
-        N_sites = direct_state.num_qubits
-
-        renyi2 = np.zeros(N_sites, dtype=float)
-        magic = np.zeros(N_sites, dtype=float)
-        for q in range(N_sites):
-            rdm = rdm_for_sites(direct_state, [q], N_sites)
-            renyi2[q] = renyi2_from_rdm(rdm)
-            magic[q] = stabilizer_renyi_magic_from_rdm(rdm)
-        renyi2 = reorder_sorted_to_original(renyi2, state["particle_ids"])
-        magic = reorder_sorted_to_original(magic, state["particle_ids"])
-
-        write_row(self.renyi2_path, state["t"], renyi2)
-        write_row(self.magic_path, state["t"], magic)
-        return [float(np.mean(renyi2)), float(np.mean(magic))]
-
-
-class TwoSiteEntanglementObservable(Observable):
-    """
-    Renyi-2 entropy -> t_renyi2_two_site_direct.dat and magic ->
-    t_magic_two_site_direct.dat of every two-site RDM, one column per site pair
-    (i < j) in the order listed in two_site_pairs.dat, which create_file writes.
-    Both quantities come from the same RDMs, hence one recorder. Columns stay in
-    sorted-site order -- a pair of moving particles has no fixed label. Needs the
-    exact state (Aer only).
-
-    Cost is N(N-1)/2 partial traces and 4^2 Pauli terms each per step.
-
-    Progress columns: the pair averages of S_2 and M_2.
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.requires_direct_state = True
-        self.progress_header = self.generate_progress_header("<S2_2site>", "<M2_2site>")
-
-    def create_file(self, params):
-        assert_density_matrix_method(params["backend"])
-        N_sites = params["N_sites"]
-        self.pairs = [(i, j) for i in range(N_sites) for j in range(i + 1, N_sites)]
-
-        self.renyi2_path = os.path.join(params["datadir"], "t_renyi2_two_site_direct.dat")
-        self.magic_path = os.path.join(params["datadir"], "t_magic_two_site_direct.dat")
-        reset_file(self.renyi2_path)
-        reset_file(self.magic_path)
-
-        # the column key: row k of this file is the site pair in column k above
+        # the column key: row k of this file is the site subset in column k above
         np.savetxt(
-            os.path.join(params["datadir"], "two_site_pairs.dat"),
-            np.array(self.pairs, dtype=int),
+            os.path.join(params["datadir"], f"{self.name}_subsets.dat"),
+            np.array(self.subsets, dtype=int),
             fmt="%d",
         )
 
@@ -368,51 +334,49 @@ class TwoSiteEntanglementObservable(Observable):
         direct_state = state["direct_state"]
         N_sites = direct_state.num_qubits
 
-        renyi2 = np.zeros(len(self.pairs), dtype=float)
-        magic = np.zeros(len(self.pairs), dtype=float)
-        for k, (site_i, site_j) in enumerate(self.pairs):
-            rdm = rdm_for_sites(direct_state, [site_i, site_j], N_sites)
+        renyi2 = np.zeros(len(self.subsets), dtype=float)
+        magic = np.zeros(len(self.subsets), dtype=float)
+        for k, sites in enumerate(self.subsets):
+            rdm = rdm_for_sites(direct_state, sites, N_sites)
             renyi2[k] = renyi2_from_rdm(rdm)
             magic[k] = stabilizer_renyi_magic_from_rdm(rdm)
+        if self.reorder:
+            renyi2 = reorder_sorted_to_original(renyi2, state["particle_ids"])
+            magic = reorder_sorted_to_original(magic, state["particle_ids"])
 
         write_row(self.renyi2_path, state["t"], renyi2)
         write_row(self.magic_path, state["t"], magic)
         return [float(np.mean(renyi2)), float(np.mean(magic))]
 
 
-class BipartiteEntanglementObservable(Observable):
+class SingleSiteEntanglementObservable(EntanglementObservable):
+
+    name = "single"
+    reorder = True  # one subset per particle, so columns can follow the particles
+
+    def site_subsets(self, N_sites):
+        return [[i] for i in range(N_sites)]
+
+
+class TwoSiteEntanglementObservable(EntanglementObservable):
     """
-    Renyi-2 entropy -> t_renyi2_bipartite_direct.dat and magic ->
-    t_magic_bipartite_direct.dat of the first half of the sorted sites, one scalar
-    per timestep each. Both come from the same half-system RDM. Needs the exact
-    state (Aer only).
-
-    Progress columns: those two scalars.
+    Cost is N(N-1)/2 partial traces and 4^2 Pauli terms each per step. Columns
+    stay in sorted-site order -- a pair of moving particles has no fixed label.
     """
 
-    def __init__(self):
-        super().__init__()
-        self.requires_direct_state = True
-        self.progress_header = self.generate_progress_header("<S2_bipart>", "<M2_bipart>")
+    name = "two_site"
 
-    def create_file(self, params):
-        assert_density_matrix_method(params["backend"])
-        self.renyi2_path = os.path.join(params["datadir"], "t_renyi2_bipartite_direct.dat")
-        self.magic_path = os.path.join(params["datadir"], "t_magic_bipartite_direct.dat")
-        reset_file(self.renyi2_path)
-        reset_file(self.magic_path)
+    def site_subsets(self, N_sites):
+        return [[i, j] for i in range(N_sites) for j in range(i + 1, N_sites)]
 
-    def append_row(self, params, state):
-        direct_state = state["direct_state"]
-        N_sites = direct_state.num_qubits
 
-        rdm = rdm_for_sites(direct_state, range(N_sites // 2), N_sites)
-        renyi2 = renyi2_from_rdm(rdm)
-        magic = stabilizer_renyi_magic_from_rdm(rdm)
+class BipartiteEntanglementObservable(EntanglementObservable):
+    """The first half of the sorted sites, so one scalar per timestep each."""
 
-        write_row(self.renyi2_path, state["t"], [renyi2])
-        write_row(self.magic_path, state["t"], [magic])
-        return [float(renyi2), float(magic)]
+    name = "bipartite"
+
+    def site_subsets(self, N_sites):
+        return [list(range(N_sites // 2))]
 
 
 class GlobalMagicObservable(Observable):

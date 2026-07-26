@@ -116,7 +116,7 @@ def test_two_site(datadir):
     assert np.allclose(ghz, [1.0, 1.0], atol=tolerance), ghz
     assert np.allclose(product, [0.0, 0.0], atol=tolerance), product
 
-    pairs = load_rows(datadir, "two_site_pairs.dat")
+    pairs = load_rows(datadir, "two_site_subsets.dat")
     expected_pairs = [(i, j) for i in range(N_sites) for j in range(i + 1, N_sites)]
     assert np.array_equal(pairs, expected_pairs), pairs
 

@@ -237,7 +237,7 @@ def simulate(params):
         "magic_global": load_cols("t_magic_global_direct.dat")[:, 1],
         "pauli_weights": load_cols("t_pauli_weight_distribution_direct.dat")[:, 1:],
         "two_site_pairs": np.atleast_2d(
-            np.loadtxt(os.path.join(datadir, "two_site_pairs.dat"), dtype=int)
+            np.loadtxt(os.path.join(datadir, "two_site_subsets.dat"), dtype=int)
         ),
     }
 
