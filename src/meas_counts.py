@@ -5,13 +5,8 @@ import csv
 from qiskit import transpile
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit_ibm_runtime import SamplerV2 as Sampler
-from qiskit.circuit import QuantumCircuit
 from evolve import add_measurement_to_circuit
 from qiskit.quantum_info import Statevector,DensityMatrix
-import numpy as np
-from qiskit_aer.noise import NoiseModel
-from qiskit_ibm_runtime.fake_provider import FakeManilaV2
-from qiskit_ibm_runtime import QiskitRuntimeService
 
 # Abstract ("QIS") gate set handed to the IonQ cloud compiler. IonQ is all-to-all,
 # so there is no coupling map to route against; we lower to a generic basis and let

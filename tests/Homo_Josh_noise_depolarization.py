@@ -26,7 +26,7 @@ else:
 
 sys.path.append(src_dir)
 
-from constants import hbar, eV, MeV, G_F
+from constants import hbar, eV, G_F
 from activate_backend import activate_backends, build_backend
 from time_evolution import run_time_evolution
 from observables import (

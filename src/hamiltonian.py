@@ -1,11 +1,8 @@
 #hamiltonian.py
 import numpy as np
-from qiskit.quantum_info import Pauli
-from qiskit.quantum_info import Pauli, Operator
 from momentum import momentum
-from constants import hbar, c , eV, MeV, GeV, G_F, kB
+from constants import G_F
 from geometric_func import geometric_func
-from qiskit.circuit import QuantumCircuit
 from shape_func import shape_func
 
 def construct_hamiltonian(params, state):

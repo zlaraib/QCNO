@@ -4,19 +4,13 @@
 
 import numpy as np
 from scipy.linalg import expm
-from qiskit.circuit import QuantumCircuit 
-from qiskit.circuit.library import ECRGate, IGate, RZGate, SXGate, XGate, CXGate
-from qiskit import transpile 
-from numpy import pi
 
-from qiskit.quantum_info import Pauli, Operator
-from qiskit.circuit.library import StatePreparation, UnitaryGate
+from qiskit.quantum_info import Pauli
+from qiskit.circuit.library import UnitaryGate
 
 from momentum import momentum
-from constants import hbar, c , eV, MeV, GeV, G_F, kB
-from geometric_func import geometric_func
+from constants import hbar, c
 from hamiltonian import construct_hamiltonian
-from perturb import pert_circuit
 
 # XX + YY + ZZ, precomputed once (real, symmetric 4x4 matrix).
 _H_JJ = Pauli('XX').to_matrix() + Pauli('YY').to_matrix() + Pauli('ZZ').to_matrix()
