@@ -178,10 +178,13 @@ def build_backend(backend_name, ibm_service, ionq_provider, backend_options=None
     elif backend_name == 'guadalupe':
         backend = FakeGuadalupeV2()  # fake ibm backend but runs for uptil 16 qubits
 
-    elif backend_name == 'aer':
+    elif backend_name == 'aer_MF':
         # method (e.g. "matrix_product_state") and any noise_model are supplied
         # by the caller through backend_options and applied via set_options below.
         backend = AerSimulator()
+        
+    elif backend_name == 'aer_MB':
+        backend = AerSimulator(method='statevector')
 
     elif backend_name == 'ibm':
         if ibm_backend == "least_busy":
@@ -196,10 +199,12 @@ def build_backend(backend_name, ibm_service, ionq_provider, backend_options=None
         # Ideal IonQ simulator using QIS gates
         backend = ionq_provider.get_backend("ionq_simulator")
 
+    elif backend_name == 'ionq_noisy_sim':
+        # Noisy IonQ simulator using QIS gates
+        backend = ionq_provider.get_backend("ionq_simulator")
+        backend.set_options(noise_model="aria-1")
     else:
         raise ValueError(f"Unsupported backend_name: {backend_name}")
 
-    if backend_options:
-        backend.set_options(**backend_options)
 
     return backend
