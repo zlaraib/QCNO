@@ -47,7 +47,7 @@ ibm_service, ionq_provider = activate_backends()
 # =========================
 # Parameter lists (Julia equivalent)
 # =========================
-backend_name = "aer"
+backend_name = "aer_MB" #manila,guadalupe, aer_MF, aer_MB, ibm, ionq
 trotter_order= "first"
 
 delta_omega_list = [-0.5, 0.0, 1.0, 0.5, 0.125]

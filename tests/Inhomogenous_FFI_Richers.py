@@ -36,8 +36,7 @@ from observables import (
 from rho_from_counts import rho_from_sigmas
 
 
-backend_name = "aer" #manila,guadalupe, aer, ibm, ionq_simulator(ideal simulator non-native gateset), ionq_qpu (ionq device non-native gateset), ionq_noisy_sim (noisy simulator non-native gateset), ibm
-####FYI : Fake manila works only for qubits: 4 or less since FakeManila is a 5-qubit device model.
+backend_name = "aer_MF" #manila,guadalupe, aer_MF, aer_MB, ibm, ionq
 trotter_order = "second" #first, second
 ibm_service, ionq_provider = activate_backends()
 

@@ -27,8 +27,7 @@ from constants import hbar, eV, MeV, G_F
 from activate_backend import activate_backends, build_backend
 
 
-backend_name = "aer" #manila,guadalupe, aer, ibm, ionq_simulator(ideal simulator non-native gateset), ionq_qpu (ionq device non-native gateset), ionq_noisy_sim (noisy simulator non-native gateset), ibm
-####FYI : Fake manila works only for qubits: 4 or less since FakeManila is a 5-qubit device model.
+backend_name = "aer_MB" #manila,guadalupe, aer_MF, aer_MB, ibm, ionq
 trotter_order= "first" #first, second
 save_plots_flag = False
 
