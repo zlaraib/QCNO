@@ -44,7 +44,15 @@ def run_time_evolution(params):
     datadir = params["datadir"]
     os.makedirs(datadir, exist_ok=True)
 
+    # Create data files
+    # Fail if direct observables requested from non-direct backend
+    supports_direct_state = backend_supports_direct_state(params["backend"])
     for obs in observables:
+        assert supports_direct_state or not obs.requires_direct_state, (
+            f"{type(obs).__name__} reads the exact state, which only an Aer "
+            f"simulator provides. Remove it from params['observables'] or set "
+            f"backend_name = 'aer'."
+        )
         obs.create_file(params)
 
     # record the exact inputs of this run before anything is sorted/mutated
