@@ -205,6 +205,9 @@ def build_backend(backend_name, ibm_service, ionq_provider, backend_options=None
         backend.set_options(noise_model="aria-1")
     else:
         raise ValueError(f"Unsupported backend_name: {backend_name}")
+    
+    if backend_options:
+        backend.set_options(**backend_options)
 
 
     return backend
