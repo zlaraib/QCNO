@@ -42,7 +42,7 @@ from observables import (
 )
 
 
-backend_name = "aer_MF" #manila,guadalupe, aer_MF, aer_MB, ibm, ionq
+backend_name = "aer" #manila,guadalupe, aer_MF, aer_MB, ibm, ionq
 trotter_order = "second" #first, second
 ibm_service, ionq_provider = activate_backends()
 
