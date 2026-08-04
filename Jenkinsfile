@@ -58,7 +58,7 @@ pipeline {
 //         archiveArtifacts artifacts: '**/*.pdf'
 // 		sh 'rm -rf datafiles plots'
 //     } 
-}
+// }
 	stage('Josh Homogenous depolarization noise'){ steps{
 		//sh 'jupyter nbconvert --to script tests/Homo_Josh_noise_depolarization.ipynb'
 		sh 'python tests/Homo_Josh_noise_depolarization.py'
