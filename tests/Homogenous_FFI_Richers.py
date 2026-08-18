@@ -218,8 +218,10 @@ def simulate(params):
         results["rho_emu_direct"] = load_cols("t_rho_emu_direct.dat")[:, 1:]
 
         # The direct growth rate is the pass/fail gate, and is only meaningful on
-        # the exact simulator (aer).
-        if params["backend_name"] == "aer":
+        # an exact simulator. Ask the backend rather than matching its name: the
+        # names have changed once already (aer -> aer_MF / aer_MB), and a stale
+        # string here silently disables the only assertion in the test.
+        if backend_supports_direct_state(params["backend"]):
             assert abs((Im_omega_direct - analytic_growth_rate) / analytic_growth_rate) < params["tolerance"], \
                 "Direct growth rate deviates from analytic result beyond tolerance"
 

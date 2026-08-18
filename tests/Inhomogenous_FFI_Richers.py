@@ -298,8 +298,9 @@ def simulate(params):
         results["rho_emu_direct"] = load_cols("t_rho_emu_direct.dat")[:, 1:]
 
     # NOTE: this test prints growth rates but has no pass/fail assert (it never
-    # had one). It cannot fail on any backend; add an aer-gated assert on
-    # Im_omega_direct vs analytic if a real check is wanted.
+    # had one). It cannot fail on any backend; add an assert on Im_omega_direct
+    # vs analytic, gated on backend_supports_direct_state, if a real check is
+    # wanted.
     return results
 
 
@@ -307,7 +308,6 @@ def plot_results(results, params, analytic_offset=100.0):
     N_sites = params["N_sites"]
     times = np.asarray(results["times"], dtype=float)
     backend = params["backend"]
-    backend_name = params["backend_name"]
     analytic_growth_rate = results["analytic_growth_rate"]
     fit_t1, fit_t2 = params["t1"], params["t2"]
 
@@ -387,7 +387,9 @@ def plot_results(results, params, analytic_offset=100.0):
 
     bond_dim = get_mps_bond_dimension_from_backend(backend)
     should_plot_analytic_line = (
-        backend_name == "aer" and bond_dim == 1 and analytic_growth_rate is not None
+        backend_supports_direct_state(backend)
+        and bond_dim == 1
+        and analytic_growth_rate is not None
     )
 
     if should_plot_analytic_line:

@@ -24,7 +24,11 @@ from observables import (
 )
 from momentum import vacuum_frequency
 from constants import hbar, eV, MeV, G_F
-from activate_backend import activate_backends, build_backend
+from activate_backend import (
+    activate_backends,
+    build_backend,
+    backend_supports_direct_state,
+)
 
 
 backend_name = "aer_MB" #manila,guadalupe, aer_MF, aer_MB, ibm, ionq
@@ -167,7 +171,9 @@ def simulate(params):
     max_abs_err = np.max(np.abs(Sz_site1_values - expected_Sz_site1))
     print("max |<Sz>_site1 - analytic| =", max_abs_err)
 
-    if params["backend_name"] == "aer":
+    # The analytic curve is only reproduced on an exact simulator; a hardware or
+    # fake backend carries device noise this tolerance was never meant to cover.
+    if backend_supports_direct_state(params["backend"]):
         assert np.all(np.abs(Sz_site1_values - expected_Sz_site1) < tolerance), (
             "Assertion failed: site-1 <Sz> values differ from the analytic "
             f"curve by more than tolerance = {tolerance}"
