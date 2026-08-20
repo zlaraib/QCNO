@@ -1,8 +1,4 @@
-#hamiltonian.py
-import numpy as np
-from qiskit.quantum_info import Pauli
-from qiskit.quantum_info import Pauli, Operator
-from constants import hbar, c , eV, MeV, GeV, G_F, kB
+#perturb.py
 
 
 def pert_circuit(qc, B_pert, N_sites, alpha):

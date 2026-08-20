@@ -1,80 +1,79 @@
 #hamiltonian.py
 import numpy as np
-from qiskit.quantum_info import Pauli
-from qiskit.quantum_info import Pauli, Operator
 from momentum import momentum
-from constants import hbar, c , eV, MeV, GeV, G_F, kB
+from constants import G_F
 from geometric_func import geometric_func
-from qiskit.circuit import QuantumCircuit
 from shape_func import shape_func
 
-def construct_hamiltonian(N, x, Δp, L, shape_name, omega, B, N_sites, Δx, p, geometric_name, periodic):
-    
+def construct_hamiltonian(params, state):
+
     """
     Build the Hamiltonian as a list of (coefficient, Pauli) terms.
 
     Inputs:
-    - N: Array of occupancies / weights for each site.
-    - x: Array of site positions.
-    - Δp: Momentum spacing.
-    - L: Total system size.
-    - shape_name: Name of the spatial shape function to use.
-    - omega: Array of vacuum oscillation frequencies for each site.
-    - B: Three-component coefficient vector for single-site X/Y/Z terms.
-    - N_sites: Number of lattice sites / qubits.
-    - p: Array of momenta for each site.
-    - geometric_name: Name of the geometric factor function to use.
-    - periodic: Whether to use periodic boundary conditions in the shape function.
+    - params: run-parameter dict.
+    - state: the driver's per-step dict, for the occupancies, positions, momenta
+      and vacuum frequencies as they stand at this substep.
 
     Output:
-    - pauli_terms: List of (coefficient, Pauli) pairs representing the Hamiltonian.
+    - terms: List of (coefficient, operator, qubits) tuples, where each term is one of:
+        * (coef, 'JJ', (q0, q1))          isotropic two-site coupling on qubits
+                                          q0, q1, i.e. coef * (X⊗X + Y⊗Y + Z⊗Z)
+        * (coef_vec, 'BJ', (q,))          full single-site (vacuum) term on qubit q,
+                                          coef_vec = (omega/2)*B = per-axis (cx,cy,cz)
+                                          for cx*X + cy*Y + cz*Z
+      All 'JJ' terms come first (as a generalized even/odd brickwork over spacing),
+      followed by one 'BJ' term per site. Site index == qubit index (the shared
+      convention of initialize_base_circuit and the recorders), so downstream code
+      applies gates directly to these indices with no remapping.
     """
-    pauli_terms = []
+    terms = []
 
-    p_mod, p_hat = momentum(p, N_sites)
+    p_mod, p_hat = momentum(state["p"], params["N_sites"])
 
-    for i in range(N_sites - 1):
-        # print(
-        #     "Python sorted site", i,
-        #     "x=", x[i],
-        #     "p=", p[i],
-        #     "N=", N[i],
-        #     "omega=", omega[i]
-        # )
-        for j in range(i + 1, N_sites):
-            geometric_factor = geometric_func(geometric_name, p_hat, i, j)
-            shape_function = shape_func(x, Δp, i, j, L, shape_name, periodic)
-            interaction_strength = ((1/2) * np.sqrt(2) * G_F * (N[i] + N[j]) / (2 * ((Δx)**3))) * geometric_factor * shape_function
+    # Site index == qubit index. initialize_base_circuit puts sorted slot i on
+    # qubit i, and the recorders report qubit i as site i, so a site's couplings
+    # have to act on the qubit of the same index.
 
-            # print("geometric_factor from site ", i, " and site ", j, "= ", geometric_factor)
-            # print("shape_function from site ", i, " and site ", j, "= ", shape_function)
-            # print("interaction_strength from site ", i, " and site ", j, "= ", interaction_strength)
+    # Two-site coupling terms, emitted as a generalized even/odd brickwork.
+    #
+    # The loop still covers ALL pairs (all-to-all): the outer index `d` is the
+    # spacing j - i, so every pair (i, i+d) with i < j appears exactly once. It
+    # does NOT assume nearest-neighbor connectivity -- longer-range couplings just
+    # come out with whatever strength geometric_func/shape_func assign (periodicity
+    # is baked into those strengths, not into this loop).
+    #
+    # For each spacing d, the bonds are split into two sub-layers by
+    # parity = (i // d) % 2. Within a sub-layer no two bonds share a qubit
+    # (same-color bonds never differ by exactly d), so those gates commute and
+    # their ordering contributes no Trotter error -- only the inter-layer
+    # non-commutativity remains. For d == 1 this is the standard nearest-neighbor
+    # even/odd: bonds (0,1),(2,3),... then (1,2),(3,4),...
+    for d in range(1, params["N_sites"]):
+        for parity in (0, 1):
+            for i in range(params["N_sites"] - d):
+                if (i // d) % 2 != parity:
+                    continue
+                j = i + d
+                geometric_factor = geometric_func(params["geometric_name"], p_hat, i, j)
+                shape_function = shape_func(state["x"], params["dp"], i, j, params["L"], params["shape_name"], params["periodic"])
+                interaction_strength = ((1/2) * np.sqrt(2) * G_F * (state["N"][i] + state["N"][j]) / (2 * ((params["dx"])**3))) * geometric_factor * shape_function
 
-            if interaction_strength != 0:
-                XX = Pauli(f'{"I"*i}X{"I"*(j-i-1)}X{"I"*(N_sites-j-1)}')
-                YY = Pauli(f'{"I"*i}Y{"I"*(j-i-1)}Y{"I"*(N_sites-j-1)}')
-                ZZ = Pauli(f'{"I"*i}Z{"I"*(j-i-1)}Z{"I"*(N_sites-j-1)}')
+                # print("geometric_factor from site ", i, " and site ", j, "= ", geometric_factor)
+                # print("shape_function from site ", i, " and site ", j, "= ", shape_function)
+                # print("interaction_strength from site ", i, " and site ", j, "= ", interaction_strength)
 
-                pauli_terms.append((interaction_strength, XX))
-                pauli_terms.append((interaction_strength, YY))
-                pauli_terms.append((interaction_strength, ZZ))
+                if interaction_strength != 0:
+                    terms.append((interaction_strength, 'JJ', (i, j)))
 
-            if omega[i] != 0:
-                Xi = Pauli(f'{"I"*i}X{"I"*(N_sites-i-1)}')
-                Yi = Pauli(f'{"I"*i}Y{"I"*(N_sites-i-1)}')
-                Zi = Pauli(f'{"I"*i}Z{"I"*(N_sites-i-1)}')
+    # Single-site (vacuum) terms: one grouped 'BJ' term per site, appended after
+    # all two-site 'JJ' terms. Each carries the full per-axis coefficient vector
+    # (omega[k]/2) * B, emitted downstream (evolve.apply_single_site_gate) as one
+    # exact 1-qubit UnitaryGate. Because the site's whole field lives in a single
+    # term, moving to a per-site field later is just indexing B by site here.
+    B = np.array([np.sin(2 * params["theta_nu"]), 0.0, -np.cos(2 * params["theta_nu"])])
+    for k in range(params["N_sites"]):
+        if state["omega"][k] != 0:
+            terms.append(((state["omega"][k] / 2) * B, 'BJ', (k,)))
 
-                pauli_terms.append(((omega[i] / 2) * B[0] / (N_sites - 1), Xi))
-                pauli_terms.append(((omega[i] / 2) * B[1] / (N_sites - 1), Yi))
-                pauli_terms.append(((omega[i] / 2) * B[2] / (N_sites - 1), Zi))
-
-            if omega[j] != 0:
-                Xj = Pauli(f'{"I"*j}X{"I"*(N_sites-j-1)}')
-                Yj = Pauli(f'{"I"*j}Y{"I"*(N_sites-j-1)}')
-                Zj = Pauli(f'{"I"*j}Z{"I"*(N_sites-j-1)}')
-
-                pauli_terms.append(((omega[j] / 2) * B[0] / (N_sites - 1), Xj))
-                pauli_terms.append(((omega[j] / 2) * B[1] / (N_sites - 1), Yj))
-                pauli_terms.append(((omega[j] / 2) * B[2] / (N_sites - 1), Zj))
-
-    return pauli_terms
+    return terms
