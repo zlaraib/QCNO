@@ -1,0 +1,51 @@
+constants
+=========
+
+.. py:module:: constants
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   constants.hbar
+   constants.c
+   constants.eV
+   constants.MeV
+   constants.GeV
+   constants.G_F
+   constants.kB
+
+
+Module Contents
+---------------
+
+.. py:data:: hbar
+   :value: 1.05457266e-27
+
+
+.. py:data:: c
+   :value: 29979245800.0
+
+
+.. py:data:: eV
+   :value: 1.60218e-12
+
+
+.. py:data:: MeV
+   :value: 1.60218e-06
+
+
+.. py:data:: GeV
+   :value: 0.00160218
+
+
+.. py:data:: G_F
+   :value: 1.4358484395604552e-49
+
+
+.. py:data:: kB
+   :value: 1.3807e-16
+
+

@@ -1,0 +1,332 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>evolve &mdash; QCNO  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="perturb" href="../perturb/index.html" />
+    <link rel="prev" title="API Reference" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            QCNO
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">evolve</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#attributes">Attributes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#functions">Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#evolve._H_JJ"><code class="docutils literal notranslate"><span class="pre">_H_JJ</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#evolve._X"><code class="docutils literal notranslate"><span class="pre">_X</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#evolve._Y"><code class="docutils literal notranslate"><span class="pre">_Y</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#evolve._Z"><code class="docutils literal notranslate"><span class="pre">_Z</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#evolve.apply_JJ_gate"><code class="docutils literal notranslate"><span class="pre">apply_JJ_gate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#evolve.apply_single_site_gate"><code class="docutils literal notranslate"><span class="pre">apply_single_site_gate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#evolve.add_measurement_to_circuit"><code class="docutils literal notranslate"><span class="pre">add_measurement_to_circuit()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#evolve.print_julia_like_hamiltonian"><code class="docutils literal notranslate"><span class="pre">print_julia_like_hamiltonian()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#evolve.pauli_label_to_qiskit_ops"><code class="docutils literal notranslate"><span class="pre">pauli_label_to_qiskit_ops()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#evolve.apply_qubit_permutation"><code class="docutils literal notranslate"><span class="pre">apply_qubit_permutation()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#evolve.apply_one_timestep_dynamic_positions"><code class="docutils literal notranslate"><span class="pre">apply_one_timestep_dynamic_positions()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../perturb/index.html">perturb</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../momentum/index.html">momentum</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../constants/index.html">constants</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../shape_func/index.html">shape_func</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../observables/index.html">observables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../hamiltonian/index.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../meas_counts/index.html">meas_counts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../base_circuit/index.html">base_circuit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../entanglement/index.html">entanglement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../time_evolution/index.html">time_evolution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../geometric_func/index.html">geometric_func</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../run_parameters/index.html">run_parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../rho_from_counts/index.html">rho_from_counts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../activate_backend/index.html">activate_backend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../sigma_statistics/index.html">sigma_statistics</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">QCNO</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">API Reference</a></li>
+      <li class="breadcrumb-item active">evolve</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/autoapi/evolve/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-evolve">
+<span id="evolve"></span><h1>evolve<a class="headerlink" href="#module-evolve" title="Link to this heading"></a></h1>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#evolve._H_JJ" title="evolve._H_JJ"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_H_JJ</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#evolve._X" title="evolve._X"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_X</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#evolve._Y" title="evolve._Y"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_Y</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#evolve._Z" title="evolve._Z"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_Z</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#evolve.apply_JJ_gate" title="evolve.apply_JJ_gate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">apply_JJ_gate</span></code></a>(qc, coef, qubit1, qubit2)</p></td>
+<td><p>Emit the isotropic two-site coupling exp(-i * coef * (X⊗X + Y⊗Y + Z⊗Z)) as a</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#evolve.apply_single_site_gate" title="evolve.apply_single_site_gate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">apply_single_site_gate</span></code></a>(qc, B, qubit)</p></td>
+<td><p>Emit a full single-site term exp(-i * (B[0]*X + B[1]*Y + B[2]*Z)) as one</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#evolve.add_measurement_to_circuit" title="evolve.add_measurement_to_circuit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_measurement_to_circuit</span></code></a>(qc_base, n_qubits[, measure])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#evolve.print_julia_like_hamiltonian" title="evolve.print_julia_like_hamiltonian"><code class="xref py py-obj docutils literal notranslate"><span class="pre">print_julia_like_hamiltonian</span></code></a>(terms, n_qubits, angle_factor)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#evolve.pauli_label_to_qiskit_ops" title="evolve.pauli_label_to_qiskit_ops"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pauli_label_to_qiskit_ops</span></code></a>(pauli, n_qubits)</p></td>
+<td><p>Convert a Pauli string into a list of (qubit_index, operator) pairs.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#evolve.apply_qubit_permutation" title="evolve.apply_qubit_permutation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">apply_qubit_permutation</span></code></a>(qc, current_particle_ids, ...)</p></td>
+<td><p>Apply SWAP gates to reorder qubits so that their particle IDs match a desired layout.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#evolve.apply_one_timestep_dynamic_positions" title="evolve.apply_one_timestep_dynamic_positions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">apply_one_timestep_dynamic_positions</span></code></a>(params, state)</p></td>
+<td><p>Apply one full physical timestep τ, but update particle positions</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py data">
+<dt class="sig sig-object py" id="evolve._H_JJ">
+<span class="sig-prename descclassname"><span class="pre">evolve.</span></span><span class="sig-name descname"><span class="pre">_H_JJ</span></span><a class="headerlink" href="#evolve._H_JJ" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="evolve._X">
+<span class="sig-prename descclassname"><span class="pre">evolve.</span></span><span class="sig-name descname"><span class="pre">_X</span></span><a class="headerlink" href="#evolve._X" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="evolve._Y">
+<span class="sig-prename descclassname"><span class="pre">evolve.</span></span><span class="sig-name descname"><span class="pre">_Y</span></span><a class="headerlink" href="#evolve._Y" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="evolve._Z">
+<span class="sig-prename descclassname"><span class="pre">evolve.</span></span><span class="sig-name descname"><span class="pre">_Z</span></span><a class="headerlink" href="#evolve._Z" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="evolve.apply_JJ_gate">
+<span class="sig-prename descclassname"><span class="pre">evolve.</span></span><span class="sig-name descname"><span class="pre">apply_JJ_gate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qubit1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qubit2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#evolve.apply_JJ_gate" title="Link to this definition"></a></dt>
+<dd><p>Emit the isotropic two-site coupling exp(-i * coef * (X⊗X + Y⊗Y + Z⊗Z)) as a
+single 2-qubit UnitaryGate.</p>
+<p>The gate is left un-decomposed here on purpose: the transpiler synthesizes it
+into the backend’s native two-qubit gate via its built-in UnitarySynthesis pass
+(see meas_counts). coef is the per-substep angle (coef * dt_substep from
+apply_one_timestep_dynamic_positions); rxx(2*coef) = exp(-i*coef*X⊗X), and X⊗X,
+Y⊗Y, Z⊗Z mutually commute so their product is this single exponential.
+X⊗X + Y⊗Y + Z⊗Z is swap-symmetric, so qubit order is irrelevant.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="evolve.apply_single_site_gate">
+<span class="sig-prename descclassname"><span class="pre">evolve.</span></span><span class="sig-name descname"><span class="pre">apply_single_site_gate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">B</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qubit</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#evolve.apply_single_site_gate" title="Link to this definition"></a></dt>
+<dd><p>Emit a full single-site term exp(-i * (B[0]*X + B[1]*Y + B[2]*Z)) as one
+1-qubit UnitaryGate, where B is the per-axis angle vector already scaled by
+dt_substep in apply_one_timestep_dynamic_positions.</p>
+<p>This groups a site’s X, Y, Z rotations into a single exact single-qubit
+unitary. X, Y, Z do not mutually commute, so emitting them as separate
+rx/ry/rz rotations would itself be an intra-site Trotter split; the
+exponential of the summed generator here avoids that.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="evolve.add_measurement_to_circuit">
+<span class="sig-prename descclassname"><span class="pre">evolve.</span></span><span class="sig-name descname"><span class="pre">add_measurement_to_circuit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qc_base</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_qubits</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Z'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#evolve.add_measurement_to_circuit" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="evolve.print_julia_like_hamiltonian">
+<span class="sig-prename descclassname"><span class="pre">evolve.</span></span><span class="sig-name descname"><span class="pre">print_julia_like_hamiltonian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">terms</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_qubits</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angle_factor</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#evolve.print_julia_like_hamiltonian" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="evolve.pauli_label_to_qiskit_ops">
+<span class="sig-prename descclassname"><span class="pre">evolve.</span></span><span class="sig-name descname"><span class="pre">pauli_label_to_qiskit_ops</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pauli</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_qubits</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#evolve.pauli_label_to_qiskit_ops" title="Link to this definition"></a></dt>
+<dd><p>Convert a Pauli string into a list of (qubit_index, operator) pairs.</p>
+<p>Inputs:
+- pauli: A Pauli operator (e.g., from Qiskit or a string like “IXYZ”).</p>
+<blockquote>
+<div><p>It represents a tensor product of single-qubit Pauli operators.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>n_qubits: Total number of qubits in the system.</p></li>
+</ul>
+<p>Output:
+- ops: A list of tuples (qubit, op), where:</p>
+<blockquote>
+<div><blockquote>
+<div><ul class="simple">
+<li><p>qubit is the integer index of the qubit the operator acts on</p></li>
+<li><p>op is one of ‘X’, ‘Y’, or ‘Z’</p></li>
+</ul>
+</div></blockquote>
+<p>Identity operators (‘I’) are ignored.</p>
+</div></blockquote>
+<p>Note:
+Qiskit uses big-endian ordering for Pauli labels:
+- The leftmost character acts on qubit (n_qubits - 1)
+- The rightmost character acts on qubit 0</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="evolve.apply_qubit_permutation">
+<span class="sig-prename descclassname"><span class="pre">evolve.</span></span><span class="sig-name descname"><span class="pre">apply_qubit_permutation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">current_particle_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_particle_ids</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#evolve.apply_qubit_permutation" title="Link to this definition"></a></dt>
+<dd><p>Apply SWAP gates to reorder qubits so that their particle IDs match a desired layout.</p>
+<p>Inputs:
+- qc: A Qiskit QuantumCircuit. SWAP gates will be appended to this circuit.
+- current_particle_ids: Array-like of length N, where index = qubit position</p>
+<blockquote>
+<div><p>and value = particle ID currently stored at that qubit.
+(i.e., current mapping: qubit → particle)</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>target_particle_ids: Array-like of length N specifying the desired mapping:
+at each qubit position, which particle ID should be present.</p></li>
+</ul>
+<p>Output:
+- qc: The same QuantumCircuit with SWAP operations added to implement the permutation.
+- updated_particle_ids: NumPy array giving the final mapping (qubit → particle)</p>
+<blockquote>
+<div><p>after applying the swaps. This should match target_particle_ids.</p>
+</div></blockquote>
+<p>Behavior:
+- The function iteratively swaps qubits so that each qubit position contains</p>
+<blockquote>
+<div><p>the correct particle ID as specified by target_particle_ids.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>It updates the internal bookkeeping (current_particle_ids) alongside the circuit.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="evolve.apply_one_timestep_dynamic_positions">
+<span class="sig-prename descclassname"><span class="pre">evolve.</span></span><span class="sig-name descname"><span class="pre">apply_one_timestep_dynamic_positions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#evolve.apply_one_timestep_dynamic_positions" title="Link to this definition"></a></dt>
+<dd><p>Apply one full physical timestep τ, but update particle positions
+after every Trotter substep dt = τ / trotter_steps.</p>
+<p>Inputs:
+- params: run-parameter dict, for the timestep τ (“tau”), the Hamiltonian</p>
+<blockquote>
+<div><p>(“dp”, “L”, “shape_name”, “theta_nu”, “N_sites”, “dx”, “geometric_name”,
+“periodic”), the Trotterization (“trotter_steps”, “trotter_order”) and
+whether particles move (“advection”).</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>state: the driver’s per-step dict, read for “qc_base”, “N”, “x”, “p”,
+“omega”, “particle_ids” and “energy_sign”.</p></li>
+</ul>
+<p>Output:
+- state, with those same seven entries advanced by one timestep.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="API Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../perturb/index.html" class="btn btn-neutral float-right" title="perturb" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Zoha Laraib.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,227 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>activate_backend &mdash; QCNO  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="sigma_statistics" href="../sigma_statistics/index.html" />
+    <link rel="prev" title="rho_from_counts" href="../rho_from_counts/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            QCNO
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../evolve/index.html">evolve</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../perturb/index.html">perturb</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../momentum/index.html">momentum</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../constants/index.html">constants</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../shape_func/index.html">shape_func</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../observables/index.html">observables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../hamiltonian/index.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../meas_counts/index.html">meas_counts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../base_circuit/index.html">base_circuit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../entanglement/index.html">entanglement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../time_evolution/index.html">time_evolution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../geometric_func/index.html">geometric_func</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../run_parameters/index.html">run_parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../rho_from_counts/index.html">rho_from_counts</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">activate_backend</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#functions">Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#activate_backend.activate_backends"><code class="docutils literal notranslate"><span class="pre">activate_backends()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#activate_backend.backend_name_of"><code class="docutils literal notranslate"><span class="pre">backend_name_of()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#activate_backend.backend_supports_direct_state"><code class="docutils literal notranslate"><span class="pre">backend_supports_direct_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#activate_backend.build_backend"><code class="docutils literal notranslate"><span class="pre">build_backend()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../sigma_statistics/index.html">sigma_statistics</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">QCNO</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">API Reference</a></li>
+      <li class="breadcrumb-item active">activate_backend</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/autoapi/activate_backend/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-activate_backend">
+<span id="activate-backend"></span><h1>activate_backend<a class="headerlink" href="#module-activate_backend" title="Link to this heading"></a></h1>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#activate_backend.activate_backends" title="activate_backend.activate_backends"><code class="xref py py-obj docutils literal notranslate"><span class="pre">activate_backends</span></code></a>()</p></td>
+<td><p>Connect to the IBM and IonQ services when credentials are available.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#activate_backend.backend_name_of" title="activate_backend.backend_name_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">backend_name_of</span></code></a>(backend)</p></td>
+<td><p>The backend's own name, whichever way it exposes one.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#activate_backend.backend_supports_direct_state" title="activate_backend.backend_supports_direct_state"><code class="xref py py-obj docutils literal notranslate"><span class="pre">backend_supports_direct_state</span></code></a>(backend)</p></td>
+<td><p>Report whether a backend allows direct statevector access (Aer only).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#activate_backend.build_backend" title="activate_backend.build_backend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_backend</span></code></a>(backend_name, ibm_service, ionq_provider)</p></td>
+<td><p>Select the execution backend for a given backend_name and apply any</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="activate_backend.activate_backends">
+<span class="sig-prename descclassname"><span class="pre">activate_backend.</span></span><span class="sig-name descname"><span class="pre">activate_backends</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#activate_backend.activate_backends" title="Link to this definition"></a></dt>
+<dd><p>Connect to the IBM and IonQ services when credentials are available.</p>
+<section id="returns">
+<h3>Returns<a class="headerlink" href="#returns" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>ibm_service</dt><dd><p>QiskitRuntimeService instance, or None if unavailable.</p>
+</dd>
+<dt>ionq_provider</dt><dd><p>IonQProvider instance, or None if unavailable.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="activate_backend.backend_name_of">
+<span class="sig-prename descclassname"><span class="pre">activate_backend.</span></span><span class="sig-name descname"><span class="pre">backend_name_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backend</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#activate_backend.backend_name_of" title="Link to this definition"></a></dt>
+<dd><p>The backend’s own name, whichever way it exposes one.</p>
+<p>Inputs:
+- backend: the backend object returned by build_backend. <cite>.name</cite> is an</p>
+<blockquote>
+<div><p>attribute on BackendV2 and a method on older backends.</p>
+</div></blockquote>
+<p>Output:
+- name string, falling back to repr(backend) if there is no name at all.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="activate_backend.backend_supports_direct_state">
+<span class="sig-prename descclassname"><span class="pre">activate_backend.</span></span><span class="sig-name descname"><span class="pre">backend_supports_direct_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backend</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#activate_backend.backend_supports_direct_state" title="Link to this definition"></a></dt>
+<dd><p>Report whether a backend allows direct statevector access (Aer only).</p>
+<p>Inputs:
+- backend: the backend object returned by build_backend.</p>
+<p>Output:
+- True for true Aer simulator backends, False otherwise.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="activate_backend.build_backend">
+<span class="sig-prename descclassname"><span class="pre">activate_backend.</span></span><span class="sig-name descname"><span class="pre">build_backend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backend_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ibm_service</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ionq_provider</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ibm_backend</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ibm_kingston'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#activate_backend.build_backend" title="Link to this definition"></a></dt>
+<dd><p>Select the execution backend for a given backend_name and apply any
+backend-specific options.</p>
+<p>Inputs:
+- backend_name: one of “manila”, “guadalupe”, “aer”, “ibm”, “ionq_qpu”,</p>
+<blockquote>
+<div><p>“ionq_noisy_sim”, “ionq_simulator”.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>ibm_service, ionq_provider: service / provider handles from
+activate_backends() (only the one matching backend_name is used).</p></li>
+<li><p>backend_options: optional dict applied verbatim via
+backend.set_options(<a href="#id1"><span class="problematic" id="id2">**</span></a>backend_options) – e.g. the Aer MPS options, or
+{“noise_model”: noise_model} for a noisy Aer sim. It is applied with no
+compatibility check, so an option the selected backend does not accept
+will raise.</p></li>
+<li><p>ibm_backend: device selection for backend_name == “ibm”. A device name
+string (default “ibm_kingston”) selects ibm_service.backend(ibm_backend);
+the sentinel “least_busy” selects
+ibm_service.least_busy(operational=True, simulator=False). Ignored for
+non-IBM backends.</p></li>
+</ul>
+<p>Output:
+- backend.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../rho_from_counts/index.html" class="btn btn-neutral float-left" title="rho_from_counts" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../sigma_statistics/index.html" class="btn btn-neutral float-right" title="sigma_statistics" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Zoha Laraib.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

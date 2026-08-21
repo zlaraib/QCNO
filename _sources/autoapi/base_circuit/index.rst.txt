@@ -1,0 +1,36 @@
+base_circuit
+============
+
+.. py:module:: base_circuit
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   base_circuit.initialize_base_circuit
+
+
+Module Contents
+---------------
+
+.. py:function:: initialize_base_circuit(n_qubits, bit_list_sorted=None, B_pert=None, alpha=None)
+
+   Build the base circuit that prepares the initial computational-basis state,
+   optionally followed by a perturbation.
+
+   Inputs:
+   - n_qubits: Number of qubits / sites.
+   - bit_list_sorted: List of '0'/'1' characters, one per site in sorted order.
+     The bitstring is reversed before state preparation to match Qiskit's
+     little-endian qubit ordering, which puts site i on qubit i -- the same
+     convention construct_hamiltonian and the observable recorders use.
+   - B_pert, alpha: Optional perturbation field and strength. When B_pert is
+     not None, pert_circuit is applied after the initial state is prepared.
+
+   Output:
+   - qc: QuantumCircuit with the initial state prepared (and barriered), plus
+     the perturbation if one was requested.
+
+

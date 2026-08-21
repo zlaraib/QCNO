@@ -1,0 +1,663 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>observables &mdash; QCNO  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="hamiltonian" href="../hamiltonian/index.html" />
+    <link rel="prev" title="shape_func" href="../shape_func/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            QCNO
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../evolve/index.html">evolve</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../perturb/index.html">perturb</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../momentum/index.html">momentum</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../constants/index.html">constants</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../shape_func/index.html">shape_func</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">observables</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#classes">Classes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#functions">Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#observables.reorder_sorted_to_original"><code class="docutils literal notranslate"><span class="pre">reorder_sorted_to_original()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.reset_file"><code class="docutils literal notranslate"><span class="pre">reset_file()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.assert_density_matrix_method"><code class="docutils literal notranslate"><span class="pre">assert_density_matrix_method()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.write_row"><code class="docutils literal notranslate"><span class="pre">write_row()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.append_npz"><code class="docutils literal notranslate"><span class="pre">append_npz()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.Observable"><code class="docutils literal notranslate"><span class="pre">Observable</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.PositionObservable"><code class="docutils literal notranslate"><span class="pre">PositionObservable</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.MomentumObservable"><code class="docutils literal notranslate"><span class="pre">MomentumObservable</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.SigmaObservable"><code class="docutils literal notranslate"><span class="pre">SigmaObservable</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.DensityMatrixObservable"><code class="docutils literal notranslate"><span class="pre">DensityMatrixObservable</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.DirectSigmaObservable"><code class="docutils literal notranslate"><span class="pre">DirectSigmaObservable</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.EntanglementObservable"><code class="docutils literal notranslate"><span class="pre">EntanglementObservable</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.SingleSiteEntanglementObservable"><code class="docutils literal notranslate"><span class="pre">SingleSiteEntanglementObservable</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.TwoSiteEntanglementObservable"><code class="docutils literal notranslate"><span class="pre">TwoSiteEntanglementObservable</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.BipartiteEntanglementObservable"><code class="docutils literal notranslate"><span class="pre">BipartiteEntanglementObservable</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#observables.GlobalMagicObservable"><code class="docutils literal notranslate"><span class="pre">GlobalMagicObservable</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../hamiltonian/index.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../meas_counts/index.html">meas_counts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../base_circuit/index.html">base_circuit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../entanglement/index.html">entanglement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../time_evolution/index.html">time_evolution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../geometric_func/index.html">geometric_func</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../run_parameters/index.html">run_parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../rho_from_counts/index.html">rho_from_counts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../activate_backend/index.html">activate_backend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../sigma_statistics/index.html">sigma_statistics</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">QCNO</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">API Reference</a></li>
+      <li class="breadcrumb-item active">observables</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/autoapi/observables/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-observables">
+<span id="observables"></span><h1>observables<a class="headerlink" href="#module-observables" title="Link to this heading"></a></h1>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#observables.Observable" title="observables.Observable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Observable</span></code></a></p></td>
+<td><p>Template for a per-step observable recorder. Subclasses implement:</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#observables.PositionObservable" title="observables.PositionObservable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PositionObservable</span></code></a></p></td>
+<td><p>Site positions -&gt; t_xsiteval.dat, one row of '&lt;t&gt; &lt;x per particle...&gt;' per</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#observables.MomentumObservable" title="observables.MomentumObservable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MomentumObservable</span></code></a></p></td>
+<td><p>One momentum component -&gt; t_p&lt;c&gt;siteval.dat, same row layout as</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#observables.SigmaObservable" title="observables.SigmaObservable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SigmaObservable</span></code></a></p></td>
+<td><p>Sampled single-site &lt;sigma_basis&gt; for one Pauli basis -&gt; t_sigma_&lt;b&gt;.dat, one</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#observables.DensityMatrixObservable" title="observables.DensityMatrixObservable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DensityMatrixObservable</span></code></a></p></td>
+<td><p>The full density matrix of every timestep -&gt; density_matrices_direct.npz, two</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#observables.DirectSigmaObservable" title="observables.DirectSigmaObservable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DirectSigmaObservable</span></code></a></p></td>
+<td><p>Exact single-site &lt;sigma_basis&gt; for one Pauli basis -&gt; t_sigma_&lt;b&gt;_direct.dat,</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#observables.EntanglementObservable" title="observables.EntanglementObservable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EntanglementObservable</span></code></a></p></td>
+<td><p>Renyi-2 entropy -&gt; t_renyi2_&lt;name&gt;_direct.dat and stabilizer Renyi-2 magic -&gt;</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#observables.SingleSiteEntanglementObservable" title="observables.SingleSiteEntanglementObservable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SingleSiteEntanglementObservable</span></code></a></p></td>
+<td><p>Renyi-2 entropy -&gt; t_renyi2_&lt;name&gt;_direct.dat and stabilizer Renyi-2 magic -&gt;</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#observables.TwoSiteEntanglementObservable" title="observables.TwoSiteEntanglementObservable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TwoSiteEntanglementObservable</span></code></a></p></td>
+<td><p>Cost is N(N-1)/2 partial traces and 4^2 Pauli terms each per step. Columns</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#observables.BipartiteEntanglementObservable" title="observables.BipartiteEntanglementObservable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BipartiteEntanglementObservable</span></code></a></p></td>
+<td><p>The first half of the sorted sites, so one scalar per timestep each.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#observables.GlobalMagicObservable" title="observables.GlobalMagicObservable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GlobalMagicObservable</span></code></a></p></td>
+<td><p>Magic of the full state -&gt; t_magic_global_direct.dat (one scalar) and the Pauli</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#observables.reorder_sorted_to_original" title="observables.reorder_sorted_to_original"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reorder_sorted_to_original</span></code></a>(data_sorted, particle_ids)</p></td>
+<td><p>Map an array given in sorted-site order back to original particle order.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#observables.reset_file" title="observables.reset_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reset_file</span></code></a>(path)</p></td>
+<td><p>Truncate (or create) a file so a run starts from empty.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#observables.assert_density_matrix_method" title="observables.assert_density_matrix_method"><code class="xref py py-obj docutils literal notranslate"><span class="pre">assert_density_matrix_method</span></code></a>(backend)</p></td>
+<td><p>Require an Aer backend running the density_matrix method.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#observables.write_row" title="observables.write_row"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_row</span></code></a>(path, t, values)</p></td>
+<td><p>Append '&lt;t&gt; &lt;values...&gt;' as one high-precision row (open/append/close).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#observables.append_npz" title="observables.append_npz"><code class="xref py py-obj docutils literal notranslate"><span class="pre">append_npz</span></code></a>(path, name, array)</p></td>
+<td><p>Append an array to an .npz as a new member (open/append/close), creating the</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="observables.reorder_sorted_to_original">
+<span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">reorder_sorted_to_original</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_sorted</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">particle_ids</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.reorder_sorted_to_original" title="Link to this definition"></a></dt>
+<dd><p>Map an array given in sorted-site order back to original particle order.</p>
+<p>Inputs:
+- data_sorted: array indexed by sorted-site slot.
+- particle_ids: original particle id occupying each sorted slot.</p>
+<p>Output:
+- data_original: array indexed by original particle id.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="observables.reset_file">
+<span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">reset_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.reset_file" title="Link to this definition"></a></dt>
+<dd><p>Truncate (or create) a file so a run starts from empty.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="observables.assert_density_matrix_method">
+<span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">assert_density_matrix_method</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backend</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.assert_density_matrix_method" title="Link to this definition"></a></dt>
+<dd><p>Require an Aer backend running the density_matrix method.</p>
+<p>Entropies and magic are nonlinear in rho, so they are only meaningful on the
+true state. Any other method applies a noise model by quantum trajectories:
+the saved density matrix is then an average over shots (a Monte-Carlo estimate
+at 1024 shots, and a single pure trajectory at 1 shot), which silently reports
+the wrong entropy rather than failing.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="observables.write_row">
+<span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">write_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.write_row" title="Link to this definition"></a></dt>
+<dd><p>Append ‘&lt;t&gt; &lt;values…&gt;’ as one high-precision row (open/append/close).</p>
+<p>Inputs:
+- path: file to append to.
+- t: time, written as the first column.
+- values: 1D sequence of numbers. Pass [value] for a single scalar column.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="observables.append_npz">
+<span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">append_npz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">array</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.append_npz" title="Link to this definition"></a></dt>
+<dd><p>Append an array to an .npz as a new member (open/append/close), creating the
+file if needed. An .npz is a zip of .npy members, so this adds to it without
+rewriting or holding in memory what is already there. Read back with
+np.load(path)[name].</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="observables.Observable">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">Observable</span></span><a class="headerlink" href="#observables.Observable" title="Link to this definition"></a></dt>
+<dd><p>Template for a per-step observable recorder. Subclasses implement:</p>
+<ul class="simple">
+<li><p>__init__(…): takes only what identifies the quantity (basis, sites, …),
+and sets self.progress_header via generate_progress_header.</p></li>
+<li><p>create_file(params): set the output path(s) and truncate them. A recorder
+whose quantities share expensive intermediates (an RDM, a Pauli sum) owns
+several files rather than recomputing them in a second recorder.</p></li>
+<li><p>append_row(params, state): write one row to each file, return one float per
+progress_header column ([] if none).</p></li>
+</ul>
+<p>A subclass that reads state[“direct_state”] sets requires_direct_state = True;
+the driver only pulls the exact state if some recorder asks for it.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.Observable.PROGRESS_COLUMN_WIDTH">
+<span class="sig-name descname"><span class="pre">PROGRESS_COLUMN_WIDTH</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">13</span></span><a class="headerlink" href="#observables.Observable.PROGRESS_COLUMN_WIDTH" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.Observable.path">
+<span class="sig-name descname"><span class="pre">path</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#observables.Observable.path" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.Observable.progress_header">
+<span class="sig-name descname"><span class="pre">progress_header</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#observables.Observable.progress_header" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.Observable.requires_direct_state">
+<span class="sig-name descname"><span class="pre">requires_direct_state</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#observables.Observable.requires_direct_state" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.Observable.generate_progress_header">
+<span class="sig-name descname"><span class="pre">generate_progress_header</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">labels</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.Observable.generate_progress_header" title="Link to this definition"></a></dt>
+<dd><p>Lay out column labels, one per value append_row returns.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.Observable.create_file">
+<span class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">create_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.Observable.create_file" title="Link to this definition"></a></dt>
+<dd><p>Called once before the time loop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.Observable.append_row">
+<span class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">append_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.Observable.append_row" title="Link to this definition"></a></dt>
+<dd><p>Inputs:
+- params: run-parameter dict.
+- state: the per-step dict built by the driver.</p>
+<p>Output:
+- list of floats, one per column in self.progress_header.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.Observable.__repr__">
+<span class="sig-name descname"><span class="pre">__repr__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#observables.Observable.__repr__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="observables.PositionObservable">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">PositionObservable</span></span><a class="headerlink" href="#observables.PositionObservable" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#observables.Observable" title="observables.Observable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Observable</span></code></a></p>
+<p>Site positions -&gt; t_xsiteval.dat, one row of ‘&lt;t&gt; &lt;x per particle…&gt;’ per
+timestep in original particle order.</p>
+<p>No progress column.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.PositionObservable.create_file">
+<span class="sig-name descname"><span class="pre">create_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.PositionObservable.create_file" title="Link to this definition"></a></dt>
+<dd><p>Called once before the time loop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.PositionObservable.append_row">
+<span class="sig-name descname"><span class="pre">append_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.PositionObservable.append_row" title="Link to this definition"></a></dt>
+<dd><p>Inputs:
+- params: run-parameter dict.
+- state: the per-step dict built by the driver.</p>
+<p>Output:
+- list of floats, one per column in self.progress_header.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="observables.MomentumObservable">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">MomentumObservable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">component</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.MomentumObservable" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#observables.Observable" title="observables.Observable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Observable</span></code></a></p>
+<p>One momentum component -&gt; t_p&lt;c&gt;siteval.dat, same row layout as
+PositionObservable.</p>
+<p>No progress column.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.MomentumObservable.component">
+<span class="sig-name descname"><span class="pre">component</span></span><a class="headerlink" href="#observables.MomentumObservable.component" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.MomentumObservable.create_file">
+<span class="sig-name descname"><span class="pre">create_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.MomentumObservable.create_file" title="Link to this definition"></a></dt>
+<dd><p>Called once before the time loop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.MomentumObservable.append_row">
+<span class="sig-name descname"><span class="pre">append_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.MomentumObservable.append_row" title="Link to this definition"></a></dt>
+<dd><p>Inputs:
+- params: run-parameter dict.
+- state: the per-step dict built by the driver.</p>
+<p>Output:
+- list of floats, one per column in self.progress_header.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="observables.SigmaObservable">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">SigmaObservable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">basis</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.SigmaObservable" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#observables.Observable" title="observables.Observable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Observable</span></code></a></p>
+<p>Sampled single-site &lt;sigma_basis&gt; for one Pauli basis -&gt; t_sigma_&lt;b&gt;.dat, one
+row of ‘&lt;t&gt; &lt;value per particle…&gt;’ per timestep in original particle order.
+This is the shot-count route, the only one that works on real backends. Costs
+one circuit execution per timestep.</p>
+<p>Progress column: the site average of &lt;sigma_basis&gt;.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.SigmaObservable.basis">
+<span class="sig-name descname"><span class="pre">basis</span></span><a class="headerlink" href="#observables.SigmaObservable.basis" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.SigmaObservable.progress_header">
+<span class="sig-name descname"><span class="pre">progress_header</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#observables.SigmaObservable.progress_header" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.SigmaObservable.create_file">
+<span class="sig-name descname"><span class="pre">create_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.SigmaObservable.create_file" title="Link to this definition"></a></dt>
+<dd><p>Called once before the time loop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.SigmaObservable.append_row">
+<span class="sig-name descname"><span class="pre">append_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.SigmaObservable.append_row" title="Link to this definition"></a></dt>
+<dd><p>Inputs:
+- params: run-parameter dict.
+- state: the per-step dict built by the driver.</p>
+<p>Output:
+- list of floats, one per column in self.progress_header.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="observables.DensityMatrixObservable">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">DensityMatrixObservable</span></span><a class="headerlink" href="#observables.DensityMatrixObservable" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#observables.Observable" title="observables.Observable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Observable</span></code></a></p>
+<p>The full density matrix of every timestep -&gt; density_matrices_direct.npz, two
+members per step: rho_&lt;step&gt; holding the 2^N x 2^N complex matrix and
+time_&lt;step&gt; holding its time. Read a run back with</p>
+<blockquote>
+<div><p>archive = np.load(“density_matrices_direct.npz”)
+times = np.array([archive[k] for k in sorted(archive) if k.startswith(”<a href="#id1"><span class="problematic" id="id2">time_</span></a>”)])
+rho = np.stack([archive[k] for k in sorted(archive) if k.startswith(”<a href="#id3"><span class="problematic" id="id4">rho_</span></a>”)])</p>
+</div></blockquote>
+<p>Needs the exact state (Aer only).</p>
+<p>Everything else here is derived from the state and discards it; this keeps it,
+so a run can be re-analysed without re-simulating. It is by far the largest
+output, 4^N complex numbers per step, which is why it is binary rather than the
+ascii every other recorder writes: ~3x smaller before compression, and far more
+than that on a state with a conserved quantum number, where most entries are
+exactly zero. Appending member by member keeps both the memory and the per-step
+cost independent of how long the run is, and leaves the file readable if a run
+is interrupted.</p>
+<p>No progress column.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.DensityMatrixObservable.requires_direct_state">
+<span class="sig-name descname"><span class="pre">requires_direct_state</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#observables.DensityMatrixObservable.requires_direct_state" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.DensityMatrixObservable.create_file">
+<span class="sig-name descname"><span class="pre">create_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.DensityMatrixObservable.create_file" title="Link to this definition"></a></dt>
+<dd><p>Called once before the time loop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.DensityMatrixObservable.append_row">
+<span class="sig-name descname"><span class="pre">append_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.DensityMatrixObservable.append_row" title="Link to this definition"></a></dt>
+<dd><p>Inputs:
+- params: run-parameter dict.
+- state: the per-step dict built by the driver.</p>
+<p>Output:
+- list of floats, one per column in self.progress_header.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="observables.DirectSigmaObservable">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">DirectSigmaObservable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">basis</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.DirectSigmaObservable" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#observables.Observable" title="observables.Observable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Observable</span></code></a></p>
+<p>Exact single-site &lt;sigma_basis&gt; for one Pauli basis -&gt; t_sigma_&lt;b&gt;_direct.dat,
+same row layout as SigmaObservable. Noise-free ground truth read off the
+simulator state, so listing it forces the driver to pull that state and only
+an Aer backend can supply it.</p>
+<p>Progress column: the site average of the exact &lt;sigma_basis&gt;.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.DirectSigmaObservable.basis">
+<span class="sig-name descname"><span class="pre">basis</span></span><a class="headerlink" href="#observables.DirectSigmaObservable.basis" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.DirectSigmaObservable.requires_direct_state">
+<span class="sig-name descname"><span class="pre">requires_direct_state</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#observables.DirectSigmaObservable.requires_direct_state" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.DirectSigmaObservable.progress_header">
+<span class="sig-name descname"><span class="pre">progress_header</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#observables.DirectSigmaObservable.progress_header" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.DirectSigmaObservable.create_file">
+<span class="sig-name descname"><span class="pre">create_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.DirectSigmaObservable.create_file" title="Link to this definition"></a></dt>
+<dd><p>Called once before the time loop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.DirectSigmaObservable.append_row">
+<span class="sig-name descname"><span class="pre">append_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.DirectSigmaObservable.append_row" title="Link to this definition"></a></dt>
+<dd><p>Inputs:
+- params: run-parameter dict.
+- state: the per-step dict built by the driver.</p>
+<p>Output:
+- list of floats, one per column in self.progress_header.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="observables.EntanglementObservable">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">EntanglementObservable</span></span><a class="headerlink" href="#observables.EntanglementObservable" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#observables.Observable" title="observables.Observable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Observable</span></code></a></p>
+<p>Renyi-2 entropy -&gt; t_renyi2_&lt;name&gt;_direct.dat and stabilizer Renyi-2 magic -&gt;
+t_magic_&lt;name&gt;_direct.dat of a set of reduced density matrices, one column per
+subset, in the order listed in &lt;name&gt;_subsets.dat. Both quantities come from
+the same RDMs, which is why they are one recorder. Needs the exact state
+(Aer only).</p>
+<p>Subclasses set name and implement site_subsets.</p>
+<p>Progress columns: the subset averages of S_2 and M_2.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.EntanglementObservable.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#observables.EntanglementObservable.name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.EntanglementObservable.reorder">
+<span class="sig-name descname"><span class="pre">reorder</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#observables.EntanglementObservable.reorder" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.EntanglementObservable.requires_direct_state">
+<span class="sig-name descname"><span class="pre">requires_direct_state</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#observables.EntanglementObservable.requires_direct_state" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.EntanglementObservable.progress_header">
+<span class="sig-name descname"><span class="pre">progress_header</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#observables.EntanglementObservable.progress_header" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.EntanglementObservable.site_subsets">
+<span class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">site_subsets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">N_sites</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.EntanglementObservable.site_subsets" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.EntanglementObservable.create_file">
+<span class="sig-name descname"><span class="pre">create_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.EntanglementObservable.create_file" title="Link to this definition"></a></dt>
+<dd><p>Called once before the time loop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.EntanglementObservable.append_row">
+<span class="sig-name descname"><span class="pre">append_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.EntanglementObservable.append_row" title="Link to this definition"></a></dt>
+<dd><p>Inputs:
+- params: run-parameter dict.
+- state: the per-step dict built by the driver.</p>
+<p>Output:
+- list of floats, one per column in self.progress_header.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="observables.SingleSiteEntanglementObservable">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">SingleSiteEntanglementObservable</span></span><a class="headerlink" href="#observables.SingleSiteEntanglementObservable" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#observables.EntanglementObservable" title="observables.EntanglementObservable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EntanglementObservable</span></code></a></p>
+<p>Renyi-2 entropy -&gt; t_renyi2_&lt;name&gt;_direct.dat and stabilizer Renyi-2 magic -&gt;
+t_magic_&lt;name&gt;_direct.dat of a set of reduced density matrices, one column per
+subset, in the order listed in &lt;name&gt;_subsets.dat. Both quantities come from
+the same RDMs, which is why they are one recorder. Needs the exact state
+(Aer only).</p>
+<p>Subclasses set name and implement site_subsets.</p>
+<p>Progress columns: the subset averages of S_2 and M_2.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.SingleSiteEntanglementObservable.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'single'</span></span><a class="headerlink" href="#observables.SingleSiteEntanglementObservable.name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.SingleSiteEntanglementObservable.reorder">
+<span class="sig-name descname"><span class="pre">reorder</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#observables.SingleSiteEntanglementObservable.reorder" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.SingleSiteEntanglementObservable.site_subsets">
+<span class="sig-name descname"><span class="pre">site_subsets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">N_sites</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.SingleSiteEntanglementObservable.site_subsets" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="observables.TwoSiteEntanglementObservable">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">TwoSiteEntanglementObservable</span></span><a class="headerlink" href="#observables.TwoSiteEntanglementObservable" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#observables.EntanglementObservable" title="observables.EntanglementObservable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EntanglementObservable</span></code></a></p>
+<p>Cost is N(N-1)/2 partial traces and 4^2 Pauli terms each per step. Columns
+stay in sorted-site order – a pair of moving particles has no fixed label.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.TwoSiteEntanglementObservable.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'two_site'</span></span><a class="headerlink" href="#observables.TwoSiteEntanglementObservable.name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.TwoSiteEntanglementObservable.site_subsets">
+<span class="sig-name descname"><span class="pre">site_subsets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">N_sites</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.TwoSiteEntanglementObservable.site_subsets" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="observables.BipartiteEntanglementObservable">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">BipartiteEntanglementObservable</span></span><a class="headerlink" href="#observables.BipartiteEntanglementObservable" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#observables.EntanglementObservable" title="observables.EntanglementObservable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EntanglementObservable</span></code></a></p>
+<p>The first half of the sorted sites, so one scalar per timestep each.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.BipartiteEntanglementObservable.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'bipartite'</span></span><a class="headerlink" href="#observables.BipartiteEntanglementObservable.name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.BipartiteEntanglementObservable.site_subsets">
+<span class="sig-name descname"><span class="pre">site_subsets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">N_sites</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.BipartiteEntanglementObservable.site_subsets" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="observables.GlobalMagicObservable">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">observables.</span></span><span class="sig-name descname"><span class="pre">GlobalMagicObservable</span></span><a class="headerlink" href="#observables.GlobalMagicObservable" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#observables.Observable" title="observables.Observable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Observable</span></code></a></p>
+<p>Magic of the full state -&gt; t_magic_global_direct.dat (one scalar) and the Pauli
+weight distribution it falls out of -&gt; t_pauli_weight_distribution_direct.dat
+(N+1 columns, weight 0..N; the key is written to pauli_weights.dat). One
+stabilizer_renyi_magic_from_rdm call returns both, which is why they are one
+recorder: that call sums over all 4^N Pauli strings and is the most expensive
+thing in the loop. Needs the exact state (Aer only).</p>
+<p>Progress column: the global magic.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.GlobalMagicObservable.requires_direct_state">
+<span class="sig-name descname"><span class="pre">requires_direct_state</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#observables.GlobalMagicObservable.requires_direct_state" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="observables.GlobalMagicObservable.progress_header">
+<span class="sig-name descname"><span class="pre">progress_header</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#observables.GlobalMagicObservable.progress_header" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.GlobalMagicObservable.create_file">
+<span class="sig-name descname"><span class="pre">create_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.GlobalMagicObservable.create_file" title="Link to this definition"></a></dt>
+<dd><p>Called once before the time loop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="observables.GlobalMagicObservable.append_row">
+<span class="sig-name descname"><span class="pre">append_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#observables.GlobalMagicObservable.append_row" title="Link to this definition"></a></dt>
+<dd><p>Inputs:
+- params: run-parameter dict.
+- state: the per-step dict built by the driver.</p>
+<p>Output:
+- list of floats, one per column in self.progress_header.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../shape_func/index.html" class="btn btn-neutral float-left" title="shape_func" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../hamiltonian/index.html" class="btn btn-neutral float-right" title="hamiltonian" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Zoha Laraib.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

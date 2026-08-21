@@ -1,0 +1,76 @@
+entanglement
+============
+
+.. py:module:: entanglement
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   entanglement.rdm_for_sites
+   entanglement.renyi2_from_rdm
+   entanglement.stabilizer_renyi_magic_from_rdm
+
+
+Module Contents
+---------------
+
+.. py:function:: rdm_for_sites(state, keep_sites, N_sites)
+
+   Reduced density matrix of a subsystem.
+
+   Inputs:
+   - state: exact Statevector or DensityMatrix of the full system.
+   - keep_sites: sorted-slot (= Qiskit qubit) indices to keep.
+   - N_sites: number of sites (qubits) in the full system.
+
+   Output:
+   - DensityMatrix of the kept sites, with the rest traced out.
+
+
+.. py:function:: renyi2_from_rdm(rdm, eps=1e-15)
+
+   Second Renyi entropy S_2 = -log2(Tr rho^2) of a reduced density matrix.
+
+   Inputs:
+   - rdm: DensityMatrix (or object with .data) for the subsystem of interest.
+   - eps: floor on the purity before the log, to avoid log2(0).
+
+   Output:
+   - S_2 as a float (bits). 0 for a pure state, log2(dim) for maximally mixed.
+
+
+.. py:function:: stabilizer_renyi_magic_from_rdm(rdm, eps=1e-15, return_pauli_weights=False)
+
+   Stabilizer 2-Renyi magic M_2 of a density matrix.
+
+   M_2 = -log2( (1/dim) * sum_P |Tr(rho P)|^4 ), summed over all Pauli strings P
+   on the subsystem. Quantifies non-stabilizerness ("magic"). Cost is 4^n in the
+   number of qubits n of the RDM, so this is only used on small subsystems / the
+   small full system of the exact-state tests.
+
+   TODO: this is the pure-state definition, and it is applied here to RDMs and to
+   noisy (mixed) states. sum_P |Tr(rho P)|^2 = dim * Tr(rho^2), so for mixed rho
+   the 1/dim normalization is short by the purity and the result picks up
+   mixedness on top of magic -- a maximally mixed qubit gives M_2 = 1 instead of
+   0. Normalizing by sum_P |Tr(rho P)|^2 instead of dim would fix that limit
+   (equivalently, subtract the Renyi-2 entropy), but even then stabilizer Renyi
+   entropies are not magic monotones for mixed states. Look into which measure the
+   noise study actually wants before reading these numbers as magic. The same
+   normalization question applies to pauli_weight_distribution below.
+
+   Inputs:
+   - rdm: DensityMatrix or Statevector (Tr(rho P) and <psi|P|psi> are the same
+     sum). Its dimension must be a power of 2.
+   - eps: floor on the magic argument before the log.
+   - return_pauli_weights: if True, also return the Pauli-weight distribution
+     (index k = summed |Tr(rho P)|^2 over Pauli strings with k non-identity
+     factors, normalized by dim).
+
+   Output:
+   - magic as a float, or (magic, pauli_weight_distribution) if
+     return_pauli_weights is True.
+
+

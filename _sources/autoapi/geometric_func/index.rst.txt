@@ -1,0 +1,19 @@
+geometric_func
+==============
+
+.. py:module:: geometric_func
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   geometric_func.geometric_func
+
+
+Module Contents
+---------------
+
+.. py:function:: geometric_func(geometric_name, p_hat, i, j)
+

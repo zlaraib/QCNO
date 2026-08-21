@@ -1,0 +1,19 @@
+perturb
+=======
+
+.. py:module:: perturb
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   perturb.pert_circuit
+
+
+Module Contents
+---------------
+
+.. py:function:: pert_circuit(qc, B_pert, N_sites, alpha)
+

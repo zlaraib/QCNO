@@ -1,0 +1,36 @@
+time_evolution
+==============
+
+.. py:module:: time_evolution
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   time_evolution.run_time_evolution
+
+
+Module Contents
+---------------
+
+.. py:function:: run_time_evolution(params)
+
+   Drive the time-evolution loop shared by all test scripts.
+
+   The driver sorts the sites into position order (the convention used by every
+   test), builds the base circuit, and steps through `times`. On each step it
+   calls every recorder in params["observables"], prints one progress row, and
+   advances the state with apply_one_timestep_dynamic_positions.
+
+   The driver has no return value. Its outputs are run_parameters.json and the
+   recorders' files, all written into params["datadir"]. A test that needs these
+   histories reads them back from those files.
+
+   Inputs:
+   - params: dict of the run's inputs (the output of a test's
+     initialize_parameters), including the list of Observable recorders in
+     params["observables"] and the output directory params["datadir"].
+
+

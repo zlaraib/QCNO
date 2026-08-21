@@ -1,0 +1,40 @@
+run_parameters
+==============
+
+.. py:module:: run_parameters
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   run_parameters._json_default
+   run_parameters.write_run_parameters
+
+
+Module Contents
+---------------
+
+.. py:function:: _json_default(v)
+
+   Fallback serializer for json.dump. Converts the non-JSON-native types that show
+   up in a run's parameters -- numpy arrays/scalars -- to plain Python, and renders
+   anything else (backend objects, functions, ...) as its repr string so the dump
+   never fails.
+
+
+.. py:function:: write_run_parameters(path, params)
+
+   Dump a run's input parameters to a JSON file.
+
+   Inputs:
+   - path: Destination file path. Parent directories are created if needed.
+   - params: Mapping of parameter name -> value. Values may be numpy arrays/scalars
+     (converted to plain Python) or non-serializable objects such as the backend
+     (recorded as their repr string via _json_default).
+
+   Output:
+   - None. Writes `path`, overwriting any existing file.
+
+

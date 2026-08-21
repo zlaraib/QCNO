@@ -1,0 +1,80 @@
+activate_backend
+================
+
+.. py:module:: activate_backend
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   activate_backend.activate_backends
+   activate_backend.backend_name_of
+   activate_backend.backend_supports_direct_state
+   activate_backend.build_backend
+
+
+Module Contents
+---------------
+
+.. py:function:: activate_backends()
+
+   Connect to the IBM and IonQ services when credentials are available.
+
+   Returns
+   -------
+   ibm_service
+       QiskitRuntimeService instance, or None if unavailable.
+   ionq_provider
+       IonQProvider instance, or None if unavailable.
+
+
+.. py:function:: backend_name_of(backend)
+
+   The backend's own name, whichever way it exposes one.
+
+   Inputs:
+   - backend: the backend object returned by build_backend. `.name` is an
+     attribute on BackendV2 and a method on older backends.
+
+   Output:
+   - name string, falling back to repr(backend) if there is no name at all.
+
+
+.. py:function:: backend_supports_direct_state(backend)
+
+   Report whether a backend allows direct statevector access (Aer only).
+
+   Inputs:
+   - backend: the backend object returned by build_backend.
+
+   Output:
+   - True for true Aer simulator backends, False otherwise.
+
+
+.. py:function:: build_backend(backend_name, ibm_service, ionq_provider, backend_options=None, ibm_backend='ibm_kingston')
+
+   Select the execution backend for a given backend_name and apply any
+   backend-specific options.
+
+   Inputs:
+   - backend_name: one of "manila", "guadalupe", "aer", "ibm", "ionq_qpu",
+     "ionq_noisy_sim", "ionq_simulator".
+   - ibm_service, ionq_provider: service / provider handles from
+     activate_backends() (only the one matching backend_name is used).
+   - backend_options: optional dict applied verbatim via
+     backend.set_options(**backend_options) -- e.g. the Aer MPS options, or
+     {"noise_model": noise_model} for a noisy Aer sim. It is applied with no
+     compatibility check, so an option the selected backend does not accept
+     will raise.
+   - ibm_backend: device selection for backend_name == "ibm". A device name
+     string (default "ibm_kingston") selects ibm_service.backend(ibm_backend);
+     the sentinel "least_busy" selects
+     ibm_service.least_busy(operational=True, simulator=False). Ignored for
+     non-IBM backends.
+
+   Output:
+   - backend.
+
+

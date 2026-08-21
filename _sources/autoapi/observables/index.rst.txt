@@ -1,0 +1,502 @@
+observables
+===========
+
+.. py:module:: observables
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   observables.Observable
+   observables.PositionObservable
+   observables.MomentumObservable
+   observables.SigmaObservable
+   observables.DensityMatrixObservable
+   observables.DirectSigmaObservable
+   observables.EntanglementObservable
+   observables.SingleSiteEntanglementObservable
+   observables.TwoSiteEntanglementObservable
+   observables.BipartiteEntanglementObservable
+   observables.GlobalMagicObservable
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   observables.reorder_sorted_to_original
+   observables.reset_file
+   observables.assert_density_matrix_method
+   observables.write_row
+   observables.append_npz
+
+
+Module Contents
+---------------
+
+.. py:function:: reorder_sorted_to_original(data_sorted, particle_ids)
+
+   Map an array given in sorted-site order back to original particle order.
+
+   Inputs:
+   - data_sorted: array indexed by sorted-site slot.
+   - particle_ids: original particle id occupying each sorted slot.
+
+   Output:
+   - data_original: array indexed by original particle id.
+
+
+.. py:function:: reset_file(path)
+
+   Truncate (or create) a file so a run starts from empty.
+
+
+.. py:function:: assert_density_matrix_method(backend)
+
+   Require an Aer backend running the density_matrix method.
+
+   Entropies and magic are nonlinear in rho, so they are only meaningful on the
+   true state. Any other method applies a noise model by quantum trajectories:
+   the saved density matrix is then an average over shots (a Monte-Carlo estimate
+   at 1024 shots, and a single pure trajectory at 1 shot), which silently reports
+   the wrong entropy rather than failing.
+
+
+.. py:function:: write_row(path, t, values)
+
+   Append '<t> <values...>' as one high-precision row (open/append/close).
+
+   Inputs:
+   - path: file to append to.
+   - t: time, written as the first column.
+   - values: 1D sequence of numbers. Pass [value] for a single scalar column.
+
+
+.. py:function:: append_npz(path, name, array)
+
+   Append an array to an .npz as a new member (open/append/close), creating the
+   file if needed. An .npz is a zip of .npy members, so this adds to it without
+   rewriting or holding in memory what is already there. Read back with
+   np.load(path)[name].
+
+
+.. py:class:: Observable
+
+   Template for a per-step observable recorder. Subclasses implement:
+
+   - __init__(...): takes only what identifies the quantity (basis, sites, ...),
+     and sets self.progress_header via generate_progress_header.
+   - create_file(params): set the output path(s) and truncate them. A recorder
+     whose quantities share expensive intermediates (an RDM, a Pauli sum) owns
+     several files rather than recomputing them in a second recorder.
+   - append_row(params, state): write one row to each file, return one float per
+     progress_header column ([] if none).
+
+   A subclass that reads state["direct_state"] sets requires_direct_state = True;
+   the driver only pulls the exact state if some recorder asks for it.
+
+
+   .. py:attribute:: PROGRESS_COLUMN_WIDTH
+      :value: 13
+
+
+
+   .. py:attribute:: path
+      :value: None
+
+
+
+   .. py:attribute:: progress_header
+      :value: ''
+
+
+
+   .. py:attribute:: requires_direct_state
+      :value: False
+
+
+
+   .. py:method:: generate_progress_header(*labels)
+
+      Lay out column labels, one per value append_row returns.
+
+
+
+   .. py:method:: create_file(params)
+      :abstractmethod:
+
+
+      Called once before the time loop.
+
+
+
+   .. py:method:: append_row(params, state)
+      :abstractmethod:
+
+
+      Inputs:
+      - params: run-parameter dict.
+      - state: the per-step dict built by the driver.
+
+      Output:
+      - list of floats, one per column in self.progress_header.
+
+
+
+   .. py:method:: __repr__()
+
+
+.. py:class:: PositionObservable
+
+   Bases: :py:obj:`Observable`
+
+
+   Site positions -> t_xsiteval.dat, one row of '<t> <x per particle...>' per
+   timestep in original particle order.
+
+   No progress column.
+
+
+   .. py:method:: create_file(params)
+
+      Called once before the time loop.
+
+
+
+   .. py:method:: append_row(params, state)
+
+      Inputs:
+      - params: run-parameter dict.
+      - state: the per-step dict built by the driver.
+
+      Output:
+      - list of floats, one per column in self.progress_header.
+
+
+
+.. py:class:: MomentumObservable(component)
+
+   Bases: :py:obj:`Observable`
+
+
+   One momentum component -> t_p<c>siteval.dat, same row layout as
+   PositionObservable.
+
+   No progress column.
+
+
+   .. py:attribute:: component
+
+
+   .. py:method:: create_file(params)
+
+      Called once before the time loop.
+
+
+
+   .. py:method:: append_row(params, state)
+
+      Inputs:
+      - params: run-parameter dict.
+      - state: the per-step dict built by the driver.
+
+      Output:
+      - list of floats, one per column in self.progress_header.
+
+
+
+.. py:class:: SigmaObservable(basis)
+
+   Bases: :py:obj:`Observable`
+
+
+   Sampled single-site <sigma_basis> for one Pauli basis -> t_sigma_<b>.dat, one
+   row of '<t> <value per particle...>' per timestep in original particle order.
+   This is the shot-count route, the only one that works on real backends. Costs
+   one circuit execution per timestep.
+
+   Progress column: the site average of <sigma_basis>.
+
+
+   .. py:attribute:: basis
+
+
+   .. py:attribute:: progress_header
+      :value: ''
+
+
+
+   .. py:method:: create_file(params)
+
+      Called once before the time loop.
+
+
+
+   .. py:method:: append_row(params, state)
+
+      Inputs:
+      - params: run-parameter dict.
+      - state: the per-step dict built by the driver.
+
+      Output:
+      - list of floats, one per column in self.progress_header.
+
+
+
+.. py:class:: DensityMatrixObservable
+
+   Bases: :py:obj:`Observable`
+
+
+   The full density matrix of every timestep -> density_matrices_direct.npz, two
+   members per step: rho_<step> holding the 2^N x 2^N complex matrix and
+   time_<step> holding its time. Read a run back with
+
+       archive = np.load("density_matrices_direct.npz")
+       times = np.array([archive[k] for k in sorted(archive) if k.startswith("time_")])
+       rho = np.stack([archive[k] for k in sorted(archive) if k.startswith("rho_")])
+
+   Needs the exact state (Aer only).
+
+   Everything else here is derived from the state and discards it; this keeps it,
+   so a run can be re-analysed without re-simulating. It is by far the largest
+   output, 4^N complex numbers per step, which is why it is binary rather than the
+   ascii every other recorder writes: ~3x smaller before compression, and far more
+   than that on a state with a conserved quantum number, where most entries are
+   exactly zero. Appending member by member keeps both the memory and the per-step
+   cost independent of how long the run is, and leaves the file readable if a run
+   is interrupted.
+
+   No progress column.
+
+
+   .. py:attribute:: requires_direct_state
+      :value: True
+
+
+
+   .. py:method:: create_file(params)
+
+      Called once before the time loop.
+
+
+
+   .. py:method:: append_row(params, state)
+
+      Inputs:
+      - params: run-parameter dict.
+      - state: the per-step dict built by the driver.
+
+      Output:
+      - list of floats, one per column in self.progress_header.
+
+
+
+.. py:class:: DirectSigmaObservable(basis)
+
+   Bases: :py:obj:`Observable`
+
+
+   Exact single-site <sigma_basis> for one Pauli basis -> t_sigma_<b>_direct.dat,
+   same row layout as SigmaObservable. Noise-free ground truth read off the
+   simulator state, so listing it forces the driver to pull that state and only
+   an Aer backend can supply it.
+
+   Progress column: the site average of the exact <sigma_basis>.
+
+
+   .. py:attribute:: basis
+
+
+   .. py:attribute:: requires_direct_state
+      :value: True
+
+
+
+   .. py:attribute:: progress_header
+      :value: ''
+
+
+
+   .. py:method:: create_file(params)
+
+      Called once before the time loop.
+
+
+
+   .. py:method:: append_row(params, state)
+
+      Inputs:
+      - params: run-parameter dict.
+      - state: the per-step dict built by the driver.
+
+      Output:
+      - list of floats, one per column in self.progress_header.
+
+
+
+.. py:class:: EntanglementObservable
+
+   Bases: :py:obj:`Observable`
+
+
+   Renyi-2 entropy -> t_renyi2_<name>_direct.dat and stabilizer Renyi-2 magic ->
+   t_magic_<name>_direct.dat of a set of reduced density matrices, one column per
+   subset, in the order listed in <name>_subsets.dat. Both quantities come from
+   the same RDMs, which is why they are one recorder. Needs the exact state
+   (Aer only).
+
+   Subclasses set name and implement site_subsets.
+
+   Progress columns: the subset averages of S_2 and M_2.
+
+
+   .. py:attribute:: name
+      :value: None
+
+
+
+   .. py:attribute:: reorder
+      :value: False
+
+
+
+   .. py:attribute:: requires_direct_state
+      :value: True
+
+
+
+   .. py:attribute:: progress_header
+      :value: ''
+
+
+
+   .. py:method:: site_subsets(N_sites)
+      :abstractmethod:
+
+
+
+   .. py:method:: create_file(params)
+
+      Called once before the time loop.
+
+
+
+   .. py:method:: append_row(params, state)
+
+      Inputs:
+      - params: run-parameter dict.
+      - state: the per-step dict built by the driver.
+
+      Output:
+      - list of floats, one per column in self.progress_header.
+
+
+
+.. py:class:: SingleSiteEntanglementObservable
+
+   Bases: :py:obj:`EntanglementObservable`
+
+
+   Renyi-2 entropy -> t_renyi2_<name>_direct.dat and stabilizer Renyi-2 magic ->
+   t_magic_<name>_direct.dat of a set of reduced density matrices, one column per
+   subset, in the order listed in <name>_subsets.dat. Both quantities come from
+   the same RDMs, which is why they are one recorder. Needs the exact state
+   (Aer only).
+
+   Subclasses set name and implement site_subsets.
+
+   Progress columns: the subset averages of S_2 and M_2.
+
+
+   .. py:attribute:: name
+      :value: 'single'
+
+
+
+   .. py:attribute:: reorder
+      :value: True
+
+
+
+   .. py:method:: site_subsets(N_sites)
+
+
+.. py:class:: TwoSiteEntanglementObservable
+
+   Bases: :py:obj:`EntanglementObservable`
+
+
+   Cost is N(N-1)/2 partial traces and 4^2 Pauli terms each per step. Columns
+   stay in sorted-site order -- a pair of moving particles has no fixed label.
+
+
+   .. py:attribute:: name
+      :value: 'two_site'
+
+
+
+   .. py:method:: site_subsets(N_sites)
+
+
+.. py:class:: BipartiteEntanglementObservable
+
+   Bases: :py:obj:`EntanglementObservable`
+
+
+   The first half of the sorted sites, so one scalar per timestep each.
+
+
+   .. py:attribute:: name
+      :value: 'bipartite'
+
+
+
+   .. py:method:: site_subsets(N_sites)
+
+
+.. py:class:: GlobalMagicObservable
+
+   Bases: :py:obj:`Observable`
+
+
+   Magic of the full state -> t_magic_global_direct.dat (one scalar) and the Pauli
+   weight distribution it falls out of -> t_pauli_weight_distribution_direct.dat
+   (N+1 columns, weight 0..N; the key is written to pauli_weights.dat). One
+   stabilizer_renyi_magic_from_rdm call returns both, which is why they are one
+   recorder: that call sums over all 4^N Pauli strings and is the most expensive
+   thing in the loop. Needs the exact state (Aer only).
+
+   Progress column: the global magic.
+
+
+   .. py:attribute:: requires_direct_state
+      :value: True
+
+
+
+   .. py:attribute:: progress_header
+      :value: ''
+
+
+
+   .. py:method:: create_file(params)
+
+      Called once before the time loop.
+
+
+
+   .. py:method:: append_row(params, state)
+
+      Inputs:
+      - params: run-parameter dict.
+      - state: the per-step dict built by the driver.
+
+      Output:
+      - list of floats, one per column in self.progress_header.
+
+
+

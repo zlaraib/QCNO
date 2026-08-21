@@ -1,0 +1,39 @@
+hamiltonian
+===========
+
+.. py:module:: hamiltonian
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   hamiltonian.construct_hamiltonian
+
+
+Module Contents
+---------------
+
+.. py:function:: construct_hamiltonian(params, state)
+
+   Build the Hamiltonian as a list of (coefficient, Pauli) terms.
+
+   Inputs:
+   - params: run-parameter dict.
+   - state: the driver's per-step dict, for the occupancies, positions, momenta
+     and vacuum frequencies as they stand at this substep.
+
+   Output:
+   - terms: List of (coefficient, operator, qubits) tuples, where each term is one of:
+       * (coef, 'JJ', (q0, q1))          isotropic two-site coupling on qubits
+                                         q0, q1, i.e. coef * (X⊗X + Y⊗Y + Z⊗Z)
+       * (coef_vec, 'BJ', (q,))          full single-site (vacuum) term on qubit q,
+                                         coef_vec = (omega/2)*B = per-axis (cx,cy,cz)
+                                         for cx*X + cy*Y + cz*Z
+     All 'JJ' terms come first (as a generalized even/odd brickwork over spacing),
+     followed by one 'BJ' term per site. Site index == qubit index (the shared
+     convention of initialize_base_circuit and the recorders), so downstream code
+     applies gates directly to these indices with no remapping.
+
+

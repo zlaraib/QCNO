@@ -1,0 +1,65 @@
+meas_counts
+===========
+
+.. py:module:: meas_counts
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   meas_counts._QIS_BASIS
+   meas_counts._CIRCUIT_LOG_COLUMNS
+   meas_counts._initialized_circuit_logs
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   meas_counts._log_circuit_info
+   meas_counts.get_direct_state
+   meas_counts.meas_counts
+
+
+Module Contents
+---------------
+
+.. py:data:: _QIS_BASIS
+   :value: ['rx', 'ry', 'rz', 'cx', 'h', 's', 'sdg', 'x']
+
+
+.. py:data:: _CIRCUIT_LOG_COLUMNS
+   :value: ['iteration', 'measurement_basis', 'initial_depth', 'final_depth', 'initial_counts',...
+
+
+.. py:data:: _initialized_circuit_logs
+
+.. py:function:: _log_circuit_info(log_path, row, backend_name=None)
+
+.. py:function:: get_direct_state(params, state)
+
+   Transpile a circuit for an Aer simulator backend and retrieve the final state
+   directly from the simulator.
+
+   The saved representation follows the simulation method: the density_matrix
+   method holds a density matrix (the only exact representation of a noisy, mixed
+   state, and the only one it accepts a save instruction for), every other method
+   holds a statevector, which is 2^N numbers instead of 4^N. Note that a noise
+   model applied under a statevector-like method is realized by quantum
+   trajectories, so the returned statevector is one trajectory, not the ensemble.
+
+   Inputs:
+   - params: run-parameter dict, for the Aer backend and the transpiler
+     optimization level.
+   - state: the driver's per-step dict, for the circuit to run.
+
+   Output:
+   - direct_state: Final DensityMatrix (density_matrix method) or Statevector
+     (any other method). Both support expectation_value() and partial_trace().
+
+
+.. py:function:: meas_counts(qc_base, measure, params, iteration=None)
+

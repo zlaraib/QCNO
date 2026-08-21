@@ -1,0 +1,57 @@
+rho_from_counts
+===============
+
+.. py:module:: rho_from_counts
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   rho_from_counts.rho_components
+   rho_from_counts.rho_from_sigmas
+
+
+Module Contents
+---------------
+
+.. py:function:: rho_components(sigma_x, sigma_y, sigma_z)
+
+   Single-site density-matrix components from single-site Pauli expectations.
+
+   rho = 1/2 (I + <sx> X + <sy> Y + <sz> Z), so per site:
+       rho_ee   = (sigma_z + 1) / 2
+       rho_mumu = (1 - sigma_z) / 2
+       rho_emu  = 0.5 * sqrt(sigma_x^2 + sigma_y^2)   ( = |rho[0,1]| )
+
+   Works elementwise on arrays. Shared by the sampled and exact-state sigma
+   paths (both via rho_from_sigmas) so the formula lives in one place.
+
+
+.. py:function:: rho_from_sigmas(datadir, sigma_suffix='', rho_suffix='from_counts')
+
+   Compute single-site density-matrix components from a set of sigma files.
+
+   Reads t_sigma_x{sigma_suffix}.dat, t_sigma_y{sigma_suffix}.dat,
+   t_sigma_z{sigma_suffix}.dat from datadir. Each file has one row per timestep:
+   a leading time column followed by the per-site <sigma_b> in original particle
+   order. Applies rho_components per site and writes
+   t_rho_ee_{rho_suffix}.dat, t_rho_mumu_{rho_suffix}.dat, and
+   t_rho_emu_{rho_suffix}.dat (time column + per-site values).
+
+   The same transform serves both paths:
+     - sampled sigmas:  rho_from_sigmas(datadir)                       -> *_from_counts
+     - exact  sigmas:   rho_from_sigmas(datadir, "_direct", "direct")  -> *_direct
+
+   Inputs:
+   - datadir: directory holding the sigma files; the rho files are written back
+     into it.
+   - sigma_suffix: suffix on the input t_sigma_* file names ("" or "_direct").
+   - rho_suffix: suffix on the output t_rho_* file names.
+
+   Output:
+   - (times, rho_ee, rho_mumu, rho_emu): the time array and the three per-site
+     component arrays (shape [n_times, n_sites]).
+
+

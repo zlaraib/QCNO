@@ -1,0 +1,28 @@
+shape_func
+==========
+
+.. py:module:: shape_func
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   shape_func.flat_top
+   shape_func.triangular
+   shape_func.none
+   shape_func.shape_func
+
+
+Module Contents
+---------------
+
+.. py:function:: flat_top(Δp, ξ)
+
+.. py:function:: triangular(Δp, ξ)
+
+.. py:function:: none(Δp, ξ)
+
+.. py:function:: shape_func(x, Δp, i, j, L, shape_name, periodic)
+

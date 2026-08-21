@@ -1,0 +1,132 @@
+evolve
+======
+
+.. py:module:: evolve
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   evolve._H_JJ
+   evolve._X
+   evolve._Y
+   evolve._Z
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   evolve.apply_JJ_gate
+   evolve.apply_single_site_gate
+   evolve.add_measurement_to_circuit
+   evolve.print_julia_like_hamiltonian
+   evolve.pauli_label_to_qiskit_ops
+   evolve.apply_qubit_permutation
+   evolve.apply_one_timestep_dynamic_positions
+
+
+Module Contents
+---------------
+
+.. py:data:: _H_JJ
+
+.. py:data:: _X
+
+.. py:data:: _Y
+
+.. py:data:: _Z
+
+.. py:function:: apply_JJ_gate(qc, coef, qubit1, qubit2)
+
+   Emit the isotropic two-site coupling exp(-i * coef * (X⊗X + Y⊗Y + Z⊗Z)) as a
+   single 2-qubit UnitaryGate.
+
+   The gate is left un-decomposed here on purpose: the transpiler synthesizes it
+   into the backend's native two-qubit gate via its built-in UnitarySynthesis pass
+   (see meas_counts). coef is the per-substep angle (coef * dt_substep from
+   apply_one_timestep_dynamic_positions); rxx(2*coef) = exp(-i*coef*X⊗X), and X⊗X,
+   Y⊗Y, Z⊗Z mutually commute so their product is this single exponential.
+   X⊗X + Y⊗Y + Z⊗Z is swap-symmetric, so qubit order is irrelevant.
+
+
+.. py:function:: apply_single_site_gate(qc, B, qubit)
+
+   Emit a full single-site term exp(-i * (B[0]*X + B[1]*Y + B[2]*Z)) as one
+   1-qubit UnitaryGate, where B is the per-axis angle vector already scaled by
+   dt_substep in apply_one_timestep_dynamic_positions.
+
+   This groups a site's X, Y, Z rotations into a single exact single-qubit
+   unitary. X, Y, Z do not mutually commute, so emitting them as separate
+   rx/ry/rz rotations would itself be an intra-site Trotter split; the
+   exponential of the summed generator here avoids that.
+
+
+.. py:function:: add_measurement_to_circuit(qc_base, n_qubits, measure='Z')
+
+.. py:function:: print_julia_like_hamiltonian(terms, n_qubits, angle_factor)
+
+.. py:function:: pauli_label_to_qiskit_ops(pauli, n_qubits)
+
+   Convert a Pauli string into a list of (qubit_index, operator) pairs.
+
+   Inputs:
+   - pauli: A Pauli operator (e.g., from Qiskit or a string like "IXYZ").
+     It represents a tensor product of single-qubit Pauli operators.
+   - n_qubits: Total number of qubits in the system.
+
+   Output:
+   - ops: A list of tuples (qubit, op), where:
+       * qubit is the integer index of the qubit the operator acts on
+       * op is one of 'X', 'Y', or 'Z'
+     Identity operators ('I') are ignored.
+
+   Note:
+   Qiskit uses big-endian ordering for Pauli labels:
+   - The leftmost character acts on qubit (n_qubits - 1)
+   - The rightmost character acts on qubit 0
+
+
+.. py:function:: apply_qubit_permutation(qc, current_particle_ids, target_particle_ids)
+
+   Apply SWAP gates to reorder qubits so that their particle IDs match a desired layout.
+
+   Inputs:
+   - qc: A Qiskit QuantumCircuit. SWAP gates will be appended to this circuit.
+   - current_particle_ids: Array-like of length N, where index = qubit position
+     and value = particle ID currently stored at that qubit.
+     (i.e., current mapping: qubit → particle)
+   - target_particle_ids: Array-like of length N specifying the desired mapping:
+     at each qubit position, which particle ID should be present.
+
+   Output:
+   - qc: The same QuantumCircuit with SWAP operations added to implement the permutation.
+   - updated_particle_ids: NumPy array giving the final mapping (qubit → particle)
+     after applying the swaps. This should match target_particle_ids.
+
+   Behavior:
+   - The function iteratively swaps qubits so that each qubit position contains
+     the correct particle ID as specified by target_particle_ids.
+   - It updates the internal bookkeeping (current_particle_ids) alongside the circuit.
+
+
+.. py:function:: apply_one_timestep_dynamic_positions(params, state)
+
+   Apply one full physical timestep τ, but update particle positions
+   after every Trotter substep dt = τ / trotter_steps.
+
+   Inputs:
+   - params: run-parameter dict, for the timestep τ ("tau"), the Hamiltonian
+     ("dp", "L", "shape_name", "theta_nu", "N_sites", "dx", "geometric_name",
+     "periodic"), the Trotterization ("trotter_steps", "trotter_order") and
+     whether particles move ("advection").
+   - state: the driver's per-step dict, read for "qc_base", "N", "x", "p",
+     "omega", "particle_ids" and "energy_sign".
+
+   Output:
+   - state, with those same seven entries advanced by one timestep.
+
+

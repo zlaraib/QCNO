@@ -1,0 +1,19 @@
+sigma_statistics
+================
+
+.. py:module:: sigma_statistics
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   sigma_statistics.calc_mean_and_sigma
+
+
+Module Contents
+---------------
+
+.. py:function:: calc_mean_and_sigma(counts, params)
+
